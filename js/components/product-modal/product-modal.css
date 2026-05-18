@@ -5,6 +5,8 @@
   display: grid;
   place-items: center;
   padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal__backdrop {
@@ -17,6 +19,8 @@
   position: relative;
   z-index: 1;
   width: min(640px, calc(100% - 1rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
 }
 
 .modal__close {
@@ -31,4 +35,16 @@
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 0.5rem;
+    align-items: start;
+  }
+
+  .modal__dialog {
+    width: 100%;
+    max-height: calc(100dvh - 1rem);
+  }
 }

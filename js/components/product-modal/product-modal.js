@@ -11,6 +11,14 @@ template.innerHTML = `
   </div>
 `;
 
+function setBodyModalLock(locked) {
+  const currentCount = Number(document.body.dataset.modalCount ?? "0");
+  const nextCount = locked ? currentCount + 1 : Math.max(0, currentCount - 1);
+
+  document.body.dataset.modalCount = String(nextCount);
+  document.body.classList.toggle("modal-open", nextCount > 0);
+}
+
 export class ProductModal extends HTMLElement {
   constructor() {
     super();
@@ -43,11 +51,17 @@ export class ProductModal extends HTMLElement {
     }
 
     this.modal.hidden = false;
+    setBodyModalLock(true);
     requestAnimationFrame(() => this.form.focusBarcode());
   }
 
   close() {
+    if (this.modal.hidden) {
+      return;
+    }
+
     this.modal.hidden = true;
+    setBodyModalLock(false);
     this.form.reset();
   }
 
