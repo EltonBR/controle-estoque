@@ -1,0 +1,23 @@
+.app-shell {
+  width: calc(100% - 3rem);
+  margin: 82px auto 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.content-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    width: min(100% - 1.25rem, 1120px);
+    margin: 10px auto 0;
+    padding: 0;
+  }
+}

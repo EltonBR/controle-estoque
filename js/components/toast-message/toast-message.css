@@ -1,0 +1,54 @@
+.app-feedback {
+  position: fixed;
+  top: 5.5rem;
+  right: 1rem;
+  z-index: 60;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 14px;
+  border-radius: 0.3125rem;
+  background: var(--surface-muted);
+  color: var(--muted);
+  box-shadow: 0 14px 30px rgba(47, 36, 25, 0.16);
+  overflow: hidden;
+}
+
+.app-feedback[data-variant="error"] {
+  background: var(--error-surface);
+  color: var(--error-text);
+}
+
+.app-feedback[data-variant="success"] {
+  background: var(--success-surface);
+  color: var(--success-text);
+}
+
+.app-feedback--timed::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.35;
+  transform-origin: left center;
+  animation: feedback-progress 3s linear forwards;
+}
+
+@keyframes feedback-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-feedback {
+    top: 4.75rem;
+    right: 0.75rem;
+    width: min(22rem, calc(100vw - 1.5rem));
+  }
+}

@@ -1,0 +1,65 @@
+.card h2 {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+}
+
+.field-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 0.3125rem;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: 2px solid rgba(31, 111, 95, 0.2);
+  border-color: var(--primary);
+}
+
+.field-inline {
+  grid-template-columns: minmax(0, 1fr) 92px;
+  align-items: end;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feedback {
+  padding: 14px;
+  border-radius: 0.3125rem;
+  background: var(--surface-muted);
+  color: var(--muted);
+}
+
+.feedback[data-variant="error"] {
+  background: var(--error-surface);
+  color: var(--error-text);
+}
+
+.feedback[data-variant="success"] {
+  background: var(--success-surface);
+  color: var(--success-text);
+}
