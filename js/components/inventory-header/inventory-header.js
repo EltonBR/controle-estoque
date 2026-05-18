@@ -1,9 +1,9 @@
-import "./product-search.js";
+import "../product-search/product-search.js";
 
-const addIconUrl = new URL("../../assets/icons/add.svg", import.meta.url).href;
-const backupIconUrl = new URL("../../assets/icons/backup.svg", import.meta.url).href;
-const restoreIconUrl = new URL("../../assets/icons/restore.svg", import.meta.url).href;
-const themeIconUrl = new URL("../../assets/icons/theme.svg", import.meta.url).href;
+const addIconUrl = new URL("../../../assets/icons/add.svg", import.meta.url).href;
+const backupIconUrl = new URL("../../../assets/icons/backup.svg", import.meta.url).href;
+const restoreIconUrl = new URL("../../../assets/icons/restore.svg", import.meta.url).href;
+const themeIconUrl = new URL("../../../assets/icons/theme.svg", import.meta.url).href;
 
 const template = document.createElement("template");
 template.innerHTML = `

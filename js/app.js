@@ -1,1 +1,1 @@
-import "./components/inventory-app.js";
+import "./components/inventory-app/inventory-app.js";

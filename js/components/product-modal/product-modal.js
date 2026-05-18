@@ -1,4 +1,4 @@
-import "./product-form.js";
+import "../product-form/product-form.js";
 
 const template = document.createElement("template");
 template.innerHTML = `

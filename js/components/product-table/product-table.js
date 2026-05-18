@@ -1,4 +1,4 @@
-import "./product-card.js";
+import "../product-card/product-card.js";
 
 const template = document.createElement("template");
 template.innerHTML = `

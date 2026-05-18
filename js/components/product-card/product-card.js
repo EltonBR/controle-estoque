@@ -1,6 +1,6 @@
-const editIconUrl = new URL("../../assets/icons/edit.svg", import.meta.url).href;
-const deleteIconUrl = new URL("../../assets/icons/delete.svg", import.meta.url).href;
-const placeholderImageUrl = new URL("../../assets/placeholder-product.svg", import.meta.url).href;
+const editIconUrl = new URL("../../../assets/icons/edit.svg", import.meta.url).href;
+const deleteIconUrl = new URL("../../../assets/icons/delete.svg", import.meta.url).href;
+const placeholderImageUrl = new URL("../../../assets/placeholder-product.svg", import.meta.url).href;
 
 function escapeHtml(value) {
   return String(value ?? "")

@@ -1,8 +1,8 @@
-import { deleteProduct, getAllProducts, replaceAllProducts, saveProduct } from "../db.js";
-import "./inventory-header.js";
-import "./product-modal.js";
-import "./product-table.js";
-import "./toast-message.js";
+import { deleteProduct, getAllProducts, replaceAllProducts, saveProduct } from "../../db.js";
+import "../inventory-header/inventory-header.js";
+import "../product-modal/product-modal.js";
+import "../product-table/product-table.js";
+import "../toast-message/toast-message.js";
 
 const THEME_STORAGE_KEY = "controle-estoque-theme";
 
