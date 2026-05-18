@@ -1,35 +1,14 @@
 import { deleteProduct, getAllProducts, replaceAllProducts, saveProduct } from "../db.js";
+import "./inventory-header.js";
 import "./product-modal.js";
-import "./product-search.js";
 import "./product-table.js";
 import "./toast-message.js";
 
-const addIconUrl = new URL("../../assets/icons/add.svg", import.meta.url).href;
-const backupIconUrl = new URL("../../assets/icons/backup.svg", import.meta.url).href;
-const restoreIconUrl = new URL("../../assets/icons/restore.svg", import.meta.url).href;
+const THEME_STORAGE_KEY = "controle-estoque-theme";
 
 const template = document.createElement("template");
 template.innerHTML = `
-  <header class="app-header">
-    <div class="app-header__inner">
-      <div class="app-header__brand">
-        <h2>Controle de estoque</h2>
-      </div>
-      <div class="app-header__search">
-        <product-search></product-search>
-      </div>
-      <div class="app-header__actions">
-        <button class="btn btn-primary btn-icon" type="button" data-action="open-create" aria-label="Cadastrar produto" title="Cadastrar produto">
-          <span class="icon-mask" aria-hidden="true" style="--icon-url: url('${addIconUrl}')"></span>
-        </button>
-        <button class="btn btn-secondary btn-icon" type="button" data-action="backup-db" aria-label="Backup do banco de dados" title="Backup do banco de dados">
-          <span class="icon-mask" aria-hidden="true" style="--icon-url: url('${backupIconUrl}')"></span>
-        </button>
-        <button class="btn btn-secondary btn-icon" type="button" data-action="open-restore" aria-label="Restaurar banco de dados" title="Restaurar banco de dados">
-          <span class="icon-mask" aria-hidden="true" style="--icon-url: url('${restoreIconUrl}')"></span>
-        </button>
-      </div>
-    </header>
+  <inventory-header></inventory-header>
   <main class="app-shell">
     <toast-message></toast-message>
     <section class="content-stack">
@@ -65,10 +44,12 @@ template.innerHTML = `
 export class InventoryApp extends HTMLElement {
   #products = [];
   #query = "";
+  #theme = "light";
 
   constructor() {
     super();
     this.appendChild(template.content.cloneNode(true));
+    this.header = this.querySelector("inventory-header");
     this.productModal = this.querySelector("product-modal");
     this.form = this.productModal.form;
     this.search = this.querySelector("product-search");
@@ -80,6 +61,8 @@ export class InventoryApp extends HTMLElement {
   }
 
   connectedCallback() {
+    this.#initializeTheme();
+    this.addEventListener("header-action", this.#onHeaderAction);
     this.addEventListener("save-product", this.#onSaveProduct);
     this.addEventListener("search-change", this.#onSearchChange);
     this.addEventListener("product-edit", this.#onEditProduct);
@@ -94,6 +77,7 @@ export class InventoryApp extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.removeEventListener("header-action", this.#onHeaderAction);
     this.removeEventListener("save-product", this.#onSaveProduct);
     this.removeEventListener("search-change", this.#onSearchChange);
     this.removeEventListener("product-edit", this.#onEditProduct);
@@ -255,6 +239,16 @@ export class InventoryApp extends HTMLElement {
     }
 
     switch (button.dataset.action) {
+      case "close-restore":
+        this.#closeRestoreModal();
+        break;
+      default:
+        break;
+    }
+  };
+
+  #onHeaderAction = (event) => {
+    switch (event.detail.action) {
       case "open-create":
         this.#openFormModal();
         break;
@@ -264,8 +258,8 @@ export class InventoryApp extends HTMLElement {
       case "open-restore":
         this.#openRestoreModal();
         break;
-      case "close-restore":
-        this.#closeRestoreModal();
+      case "toggle-theme":
+        this.#toggleTheme();
         break;
       default:
         break;
@@ -289,6 +283,24 @@ export class InventoryApp extends HTMLElement {
 
   #showStatus(message, variant = "success") {
     this.toast.show(message, variant);
+  }
+
+  #initializeTheme() {
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    this.#applyTheme(savedTheme === "dark" || savedTheme === "light" ? savedTheme : preferredTheme);
+  }
+
+  #toggleTheme() {
+    const nextTheme = this.#theme === "dark" ? "light" : "dark";
+    this.#applyTheme(nextTheme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  }
+
+  #applyTheme(theme) {
+    this.#theme = theme;
+    document.documentElement.dataset.theme = theme;
+    this.header.theme = theme;
   }
 
   #openFormModal(product = null) {
