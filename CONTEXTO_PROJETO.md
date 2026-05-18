@@ -27,9 +27,13 @@ O projeto esta funcionalmente organizado em componentes isolados, cada um com:
 O app atual suporta:
 
 - cadastro e edicao de produtos em modal
+- exibicao de informacoes detalhadas do produto em modal
 - upload de imagem por arquivo
 - captura de imagem por webcam
 - busca por nome, codigo de barras e observacoes
+- gerenciamento de tags predefinidas
+- selecao de tags por produto
+- historico de preco por produto
 - ajuste rapido de estoque direto no card
 - exclusao com confirmacao
 - backup em JSON
@@ -129,13 +133,23 @@ Responsavel por:
 
 - `js/components/inventory-app/`
 - `js/components/inventory-header/`
+- `js/components/predefined-tags-modal/`
 - `js/components/product-camera-modal/`
 - `js/components/product-card/`
 - `js/components/product-form/`
+- `js/components/product-info-modal/`
 - `js/components/product-modal/`
+- `js/components/product-price-history-editor/`
 - `js/components/product-search/`
 - `js/components/product-table/`
+- `js/components/product-tags-modal/`
+- `js/components/restore-database-modal/`
 - `js/components/toast-message/`
+
+### Utilitarios compartilhados
+
+- `js/utils/modal-lock.js`
+- `js/utils/tag-utils.js`
 
 ## Componentes e responsabilidades
 
@@ -154,14 +168,20 @@ Responsabilidades:
 - filtro da listagem com base na busca
 - tratamento de eventos como:
   - `header-action`
+  - `predefined-tags-save`
   - `search-change`
   - `save-product`
   - `product-edit`
+  - `product-info`
   - `product-delete`
   - `product-increase`
   - `product-decrease`
   - `product-modal-close`
+  - `product-info-close`
+  - `restore-database-close`
+  - `restore-database-submit`
 - backup e restauracao
+- gerenciamento de tags predefinidas
 - aplicacao do tema salvo
 
 ### `inventory-header`
@@ -182,6 +202,7 @@ Responsabilidades:
   - `open-create`
   - `backup-db`
   - `open-restore`
+  - `open-predefined-tags`
   - `toggle-theme`
 
 ### `product-search`
@@ -231,6 +252,7 @@ Responsabilidades:
   - codigo de barras
   - observacoes
 - emitir eventos de acao:
+  - `product-info`
   - `product-edit`
   - `product-delete`
   - `product-increase`
@@ -264,10 +286,57 @@ Responsabilidades:
   - nome
   - quantidade
   - peso
+- validacao de:
+  - fabricacao item mais antigo
+  - validade em meses
 - leitura de imagem por `input[type=file]`
 - abertura do modal de camera
+- composicao do editor de historico de preco
+- composicao do seletor de tags do produto
 - consumo do evento `camera-photo-captured`
+- consumo do evento `product-tags-save`
 - emissao do evento `save-product`
+
+### `product-price-history-editor`
+
+Arquivos:
+
+- `js/components/product-price-history-editor/product-price-history-editor.js`
+- `js/components/product-price-history-editor/product-price-history-editor.css`
+
+Responsabilidades:
+
+- encapsular a edicao do historico de preco do produto
+- renderizar lista de entradas de preco
+- adicionar e remover linhas
+- atualizar valores de data e preco
+- normalizar o payload final do historico
+
+### `product-tags-modal`
+
+Arquivos:
+
+- `js/components/product-tags-modal/product-tags-modal.js`
+- `js/components/product-tags-modal/product-tags-modal.css`
+
+Responsabilidades:
+
+- abrir lista de tags predefinidas disponiveis
+- permitir selecao de tags para um produto
+- emitir evento `product-tags-save`
+
+### `predefined-tags-modal`
+
+Arquivos:
+
+- `js/components/predefined-tags-modal/predefined-tags-modal.js`
+- `js/components/predefined-tags-modal/predefined-tags-modal.css`
+
+Responsabilidades:
+
+- cadastrar e remover tags predefinidas
+- manter um rascunho local antes de salvar
+- emitir evento `predefined-tags-save`
 
 ### `product-camera-modal`
 
@@ -284,6 +353,34 @@ Responsabilidades:
 - mostrar preview de video
 - capturar frame para `data URL`
 - emitir evento `camera-photo-captured`
+
+### `product-info-modal`
+
+Arquivos:
+
+- `js/components/product-info-modal/product-info-modal.js`
+- `js/components/product-info-modal/product-info-modal.css`
+
+Responsabilidades:
+
+- exibir os detalhes completos do produto
+- renderizar imagem, identificacao, datas, tags e observacoes
+- exibir o historico de preco ordenado
+- emitir evento `product-info-close`
+
+### `restore-database-modal`
+
+Arquivos:
+
+- `js/components/restore-database-modal/restore-database-modal.js`
+- `js/components/restore-database-modal/restore-database-modal.css`
+
+Responsabilidades:
+
+- encapsular o fluxo de restauracao do banco por arquivo
+- validar selecao do arquivo no nivel de UI
+- emitir `restore-database-submit`
+- emitir `restore-database-close`
 
 ### `toast-message`
 
@@ -321,10 +418,12 @@ Responsabilidades:
 
 1. usuario abre cadastro pelo header ou edita por um card
 2. `inventory-app` abre `product-modal`
-3. `product-form` valida os dados
-4. `product-form` emite `save-product`
-5. `inventory-app` persiste no IndexedDB
-6. listagem e feedback sao atualizados
+3. `product-form` coordena campos basicos, tags, imagem e historico de preco
+4. `product-price-history-editor` normaliza o historico
+5. `product-form` valida os dados
+6. `product-form` emite `save-product`
+7. `inventory-app` persiste no IndexedDB
+8. listagem e feedback sao atualizados
 
 ### Fluxo de imagem por camera
 
@@ -334,6 +433,35 @@ Responsabilidades:
 4. usuario captura a foto
 5. `product-camera-modal` emite `camera-photo-captured`
 6. `product-form` armazena a imagem em `#selectedImage`
+
+### Fluxo de tags
+
+1. usuario abre `Gerenciar tags` no `inventory-header`
+2. `inventory-app` abre `predefined-tags-modal`
+3. modal emite `predefined-tags-save`
+4. `inventory-app` persiste as tags em `configuracoes`
+5. `product-form` recebe a lista de tags disponiveis
+
+### Fluxo de tags por produto
+
+1. usuario abre `Gerenciar tags` no `product-form`
+2. `product-form` abre `product-tags-modal`
+3. modal emite `product-tags-save`
+4. `product-form` atualiza a selecao local de tags
+
+### Fluxo de informacoes do produto
+
+1. usuario clica no botao de informacoes no `product-card`
+2. card emite `product-info`
+3. `inventory-app` abre `product-info-modal`
+
+### Fluxo de restauracao
+
+1. usuario abre o modal pelo header
+2. `restore-database-modal` coleta o arquivo
+3. modal emite `restore-database-submit`
+4. `inventory-app` valida e restaura o JSON no IndexedDB
+5. listagem e feedback sao atualizados
 
 ### Fluxo de tema
 
@@ -356,6 +484,7 @@ Banco:
 Store:
 
 - `produtos`
+- `configuracoes`
 
 Campos usados no produto:
 
@@ -366,9 +495,17 @@ Campos usados no produto:
 - `quantity`
 - `weight`
 - `weightUnit`
+- `manufacturedAt`
+- `shelfLifeMonths`
+- `tags`
+- `priceHistory`
 - `notes`
 - `createdAt`
 - `updatedAt`
+
+Chaves usadas em `configuracoes`:
+
+- `predefined-tags`
 
 ## Estilo e organizacao de CSS
 
@@ -399,10 +536,16 @@ Atualmente os CSS dos componentes sao carregados pelo `index.html`.
 
 - cadastro
 - edicao
+- modal de informacoes detalhadas
 - exclusao
 - listagem por cards
 - ajuste rapido de estoque
 - busca textual
+- tags predefinidas
+- tags por produto
+- historico de preco
+- fabricacao do item mais antigo
+- validade em meses
 
 ### Imagens
 
@@ -433,6 +576,8 @@ Atualmente os CSS dos componentes sao carregados pelo `index.html`.
 - se houver produtos, foco vai para a busca
 - se nao houver produtos, o modal de cadastro abre automaticamente
 - ao abrir o formulario, o foco preferencial vai para o campo de codigo de barras
+- ao abrir o modal de tags predefinidas, o foco vai para o input de nova tag
+- ao abrir o modal de restauracao, o foco vai para o seletor de arquivo
 
 ### Exclusao
 
@@ -457,10 +602,12 @@ Atualmente os CSS dos componentes sao carregados pelo `index.html`.
   - `localStorage`
   - `navigator.mediaDevices.getUserMedia`
 - o carregamento dos estilos ainda e centralizado em `index.html`, mesmo com CSS por componente
+- a infraestrutura de bloqueio de scroll e contagem de modais foi centralizada em `js/utils/modal-lock.js`
+- a normalizacao de tags foi centralizada em `js/utils/tag-utils.js`
 
 ## Resumo arquitetural
 
-O estado central da aplicacao vive em `inventory-app`, a persistencia vive em `db.js` e a interface foi fragmentada em componentes especializados com eventos customizados para comunicacao. A organizacao atual privilegia separacao de responsabilidades, baixo acoplamento entre elementos visuais e manutencao incremental sem introduzir dependencias externas.
+O estado central da aplicacao vive em `inventory-app`, a persistencia vive em `db.js` e a interface foi fragmentada em componentes especializados com eventos customizados para comunicacao. A organizacao atual privilegia separacao de responsabilidades, baixo acoplamento entre elementos visuais e manutencao incremental sem introduzir dependencias externas. Parte da infraestrutura comum ja foi extraida para utilitarios compartilhados, e o formulario principal passou a delegar o historico de preco para um componente dedicado.
 
 ### Ordenacao
 
@@ -534,14 +681,21 @@ Ainda usa `window.confirm`, sem modal customizado.
 - `styles.css`
 - `js/app.js`
 - `js/db.js`
+- `js/utils/modal-lock.js`
+- `js/utils/tag-utils.js`
 - `js/components/inventory-app/inventory-app.js`
 - `js/components/inventory-header/inventory-header.js`
+- `js/components/predefined-tags-modal/predefined-tags-modal.js`
 - `js/components/product-search/product-search.js`
 - `js/components/product-table/product-table.js`
 - `js/components/product-card/product-card.js`
+- `js/components/product-info-modal/product-info-modal.js`
 - `js/components/product-modal/product-modal.js`
 - `js/components/product-form/product-form.js`
+- `js/components/product-price-history-editor/product-price-history-editor.js`
+- `js/components/product-tags-modal/product-tags-modal.js`
 - `js/components/product-camera-modal/product-camera-modal.js`
+- `js/components/restore-database-modal/restore-database-modal.js`
 - `js/components/toast-message/toast-message.js`
 
 ## Execucao local
