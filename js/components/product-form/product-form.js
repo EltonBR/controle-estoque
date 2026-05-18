@@ -24,11 +24,11 @@ template.innerHTML = `
         </div>
         <div class="field-media-status" data-role="image-status" hidden></div>
       </div>
-      <div class="field">
-        <label for="quantity">Quantidade</label>
-        <input id="quantity" name="quantity" type="number" min="0" step="1" required />
-      </div>
-      <div class="field field-inline">
+      <div class="field-row field-row--stock">
+        <div class="field">
+          <label for="quantity">Quantidade</label>
+          <input id="quantity" name="quantity" type="number" min="0" step="1" required />
+        </div>
         <div class="field">
           <label for="weight">Peso</label>
           <input id="weight" name="weight" type="number" min="0" step="0.01" />
@@ -39,6 +39,16 @@ template.innerHTML = `
             <option value="g">g</option>
             <option value="kg">kg</option>
           </select>
+        </div>
+      </div>
+      <div class="field-row field-row--dates">
+        <div class="field">
+          <label for="manufacturedAt">Fabricacao item mais antigo</label>
+          <input id="manufacturedAt" name="manufacturedAt" type="date" />
+        </div>
+        <div class="field">
+          <label for="shelfLifeMonths">Validade em meses</label>
+          <input id="shelfLifeMonths" name="shelfLifeMonths" type="number" min="0" step="1" inputmode="numeric" />
         </div>
       </div>
       <div class="field">
@@ -166,6 +176,9 @@ export class ProductForm extends HTMLElement {
     this.form.elements.namedItem("quantity").value = String(product.quantity ?? 0);
     this.form.elements.namedItem("weight").value = product.weight ?? "";
     this.form.elements.namedItem("weightUnit").value = product.weightUnit ?? "g";
+    this.form.elements.namedItem("manufacturedAt").value = product.manufacturedAt ?? "";
+    this.form.elements.namedItem("shelfLifeMonths").value =
+      product.shelfLifeMonths === null || product.shelfLifeMonths === undefined ? "" : String(product.shelfLifeMonths);
     this.form.elements.namedItem("notes").value = product.notes ?? "";
     this.#selectedImage = product.image ?? "";
     this.#priceHistory = Array.isArray(product.priceHistory)
@@ -421,6 +434,9 @@ export class ProductForm extends HTMLElement {
     const quantity = Number(formData.get("quantity") ?? 0);
     const weightRaw = String(formData.get("weight") ?? "").trim();
     const weight = weightRaw ? Number(weightRaw) : null;
+    const manufacturedAt = String(formData.get("manufacturedAt") ?? "").trim();
+    const shelfLifeMonthsRaw = String(formData.get("shelfLifeMonths") ?? "").trim();
+    const shelfLifeMonths = shelfLifeMonthsRaw ? Number(shelfLifeMonthsRaw) : null;
 
     if (!name) {
       this.#setFeedback("Informe o nome do produto.", "error");
@@ -434,6 +450,16 @@ export class ProductForm extends HTMLElement {
 
     if (weightRaw && (!Number.isFinite(weight) || weight < 0)) {
       this.#setFeedback("Peso invalido.", "error");
+      return;
+    }
+
+    if (manufacturedAt && Number.isNaN(new Date(`${manufacturedAt}T00:00:00`).getTime())) {
+      this.#setFeedback("Data de fabricacao invalida.", "error");
+      return;
+    }
+
+    if (shelfLifeMonthsRaw && (!Number.isInteger(shelfLifeMonths) || shelfLifeMonths < 0)) {
+      this.#setFeedback("Validade em meses invalida.", "error");
       return;
     }
 
@@ -458,6 +484,8 @@ export class ProductForm extends HTMLElement {
       quantity,
       weight,
       weightUnit: String(formData.get("weightUnit") ?? "g"),
+      manufacturedAt,
+      shelfLifeMonths,
       tags: this.#normalizeTags(this.#tags),
       priceHistory,
       notes: String(formData.get("notes") ?? "").trim(),

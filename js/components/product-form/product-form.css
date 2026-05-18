@@ -13,6 +13,11 @@
   gap: 6px;
 }
 
+.field-row {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .field label {
   font-size: 0.9rem;
   font-weight: 700;
@@ -95,9 +100,13 @@
   color: var(--muted);
 }
 
-.field-inline {
-  grid-template-columns: minmax(0, 1fr) 92px;
+.field-row--stock {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) 92px;
   align-items: end;
+}
+
+.field-row--dates {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .actions {
@@ -131,6 +140,10 @@
   }
 
   .price-history-row {
+    grid-template-columns: 1fr;
+  }
+
+  .field-row--stock {
     grid-template-columns: 1fr;
   }
 

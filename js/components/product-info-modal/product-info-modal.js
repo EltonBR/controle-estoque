@@ -27,6 +27,14 @@ template.innerHTML = `
             <dt>Peso</dt>
             <dd data-role="weight">Nao informado</dd>
           </div>
+          <div class="product-info-card__row">
+            <dt>Fabricacao item mais antigo</dt>
+            <dd data-role="manufactured-at">Nao informado</dd>
+          </div>
+          <div class="product-info-card__row">
+            <dt>Validade</dt>
+            <dd data-role="shelf-life-months">Nao informado</dd>
+          </div>
           <div class="product-info-card__row product-info-card__row--full">
             <dt>Tags</dt>
             <dd class="product-info-card__tags" data-role="tags">Nenhuma tag.</dd>
@@ -114,6 +122,34 @@ function formatWeight(product) {
   return `${product.weight} ${product.weightUnit || "g"}`;
 }
 
+function formatDateOnly(value) {
+  if (!value) {
+    return "Nao informado";
+  }
+
+  const [year, month, day] = String(value).split("-");
+
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  return `${day}/${month}/${year}`;
+}
+
+function formatShelfLifeMonths(value) {
+  if (value === null || value === undefined || value === "") {
+    return "Nao informado";
+  }
+
+  const months = Number(value);
+
+  if (!Number.isFinite(months)) {
+    return String(value);
+  }
+
+  return `${months} ${months === 1 ? "mes" : "meses"}`;
+}
+
 export class ProductInfoModal extends HTMLElement {
   constructor() {
     super();
@@ -124,6 +160,8 @@ export class ProductInfoModal extends HTMLElement {
     this.quantity = this.querySelector('[data-role="quantity"]');
     this.barcode = this.querySelector('[data-role="barcode"]');
     this.weight = this.querySelector('[data-role="weight"]');
+    this.manufacturedAt = this.querySelector('[data-role="manufactured-at"]');
+    this.shelfLifeMonths = this.querySelector('[data-role="shelf-life-months"]');
     this.tags = this.querySelector('[data-role="tags"]');
     this.notes = this.querySelector('[data-role="notes"]');
     this.createdAt = this.querySelector('[data-role="created-at"]');
@@ -169,6 +207,8 @@ export class ProductInfoModal extends HTMLElement {
     this.quantity.textContent = `${product.quantity ?? 0} unidades`;
     this.barcode.textContent = product.barcode || "Nao informado";
     this.weight.textContent = formatWeight(product);
+    this.manufacturedAt.textContent = formatDateOnly(product.manufacturedAt);
+    this.shelfLifeMonths.textContent = formatShelfLifeMonths(product.shelfLifeMonths);
     this.tags.textContent = Array.isArray(product.tags) && product.tags.length ? product.tags.join(", ") : "Nenhuma tag.";
     this.notes.textContent = product.notes || "Sem observacoes.";
     this.createdAt.textContent = formatDate(product.createdAt);
