@@ -1,5 +1,6 @@
 import { deleteProduct, getAllProducts, replaceAllProducts, saveProduct } from "../../db.js";
 import "../inventory-header/inventory-header.js";
+import "../product-info-modal/product-info-modal.js";
 import "../product-modal/product-modal.js";
 import "../restore-database-modal/restore-database-modal.js";
 import "../product-table/product-table.js";
@@ -18,6 +19,7 @@ template.innerHTML = `
       </div>
     </section>
   </main>
+  <product-info-modal></product-info-modal>
   <product-modal></product-modal>
   <restore-database-modal></restore-database-modal>
 `;
@@ -31,6 +33,7 @@ export class InventoryApp extends HTMLElement {
     super();
     this.appendChild(template.content.cloneNode(true));
     this.header = this.querySelector("inventory-header");
+    this.infoModal = this.querySelector("product-info-modal");
     this.productModal = this.querySelector("product-modal");
     this.form = this.productModal.form;
     this.search = this.querySelector("product-search");
@@ -45,10 +48,12 @@ export class InventoryApp extends HTMLElement {
     this.addEventListener("save-product", this.#onSaveProduct);
     this.addEventListener("search-change", this.#onSearchChange);
     this.addEventListener("product-edit", this.#onEditProduct);
+    this.addEventListener("product-info", this.#onInfoProduct);
     this.addEventListener("product-delete", this.#onDeleteProduct);
     this.addEventListener("product-increase", this.#onAdjustStock);
     this.addEventListener("product-decrease", this.#onAdjustStock);
     this.addEventListener("product-modal-close", this.#onProductModalClose);
+    this.addEventListener("product-info-close", this.#onProductInfoClose);
     this.addEventListener("restore-database-close", this.#onRestoreModalClose);
     this.addEventListener("restore-database-submit", this.#onRestoreSubmit);
     window.addEventListener("keydown", this.#onWindowKeydown);
@@ -60,10 +65,12 @@ export class InventoryApp extends HTMLElement {
     this.removeEventListener("save-product", this.#onSaveProduct);
     this.removeEventListener("search-change", this.#onSearchChange);
     this.removeEventListener("product-edit", this.#onEditProduct);
+    this.removeEventListener("product-info", this.#onInfoProduct);
     this.removeEventListener("product-delete", this.#onDeleteProduct);
     this.removeEventListener("product-increase", this.#onAdjustStock);
     this.removeEventListener("product-decrease", this.#onAdjustStock);
     this.removeEventListener("product-modal-close", this.#onProductModalClose);
+    this.removeEventListener("product-info-close", this.#onProductInfoClose);
     this.removeEventListener("restore-database-close", this.#onRestoreModalClose);
     this.removeEventListener("restore-database-submit", this.#onRestoreSubmit);
     window.removeEventListener("keydown", this.#onWindowKeydown);
@@ -123,6 +130,10 @@ export class InventoryApp extends HTMLElement {
 
   #onEditProduct = (event) => {
     this.#openFormModal(event.detail.product);
+  };
+
+  #onInfoProduct = (event) => {
+    this.infoModal.open(event.detail.product);
   };
 
   #onDeleteProduct = async (event) => {
@@ -240,6 +251,11 @@ export class InventoryApp extends HTMLElement {
       return;
     }
 
+    if (this.infoModal.isOpen) {
+      this.infoModal.close();
+      return;
+    }
+
     if (this.restoreModal.isOpen) {
       this.#closeRestoreModal();
     }
@@ -281,6 +297,10 @@ export class InventoryApp extends HTMLElement {
 
   #onProductModalClose = () => {
     this.#closeFormModal();
+  };
+
+  #onProductInfoClose = () => {
+    this.infoModal.close();
   };
 
   #openRestoreModal() {

@@ -108,7 +108,7 @@
 
 .product-item__actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
@@ -144,6 +144,17 @@
 .icon-btn-edit {
   color: var(--primary-strong);
   background: var(--icon-btn-edit-bg);
+}
+
+.icon-btn-info {
+  background: var(--surface-raised);
+  color: var(--primary-strong);
+}
+
+.icon-btn-info__glyph {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .icon-btn-delete {
@@ -189,7 +200,7 @@
   }
 
   .product-item__actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.35rem;
   }
 

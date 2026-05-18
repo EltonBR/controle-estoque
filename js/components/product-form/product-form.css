@@ -47,6 +47,33 @@
   min-width: 6.5rem;
 }
 
+.field-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.btn-history-add {
+  white-space: nowrap;
+}
+
+.price-history-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.price-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-history-remove {
+  white-space: nowrap;
+}
+
 .field-media-status {
   font-size: 0.82rem;
   color: var(--muted);
@@ -81,11 +108,22 @@
 }
 
 @media (max-width: 640px) {
+  .field-history-header,
   .field-media-picker {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .price-history-row {
     grid-template-columns: 1fr;
   }
 
   .btn-camera {
+    width: 100%;
+  }
+
+  .btn-history-add,
+  .btn-history-remove {
     width: 100%;
   }
 }

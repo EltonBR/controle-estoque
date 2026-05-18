@@ -71,6 +71,9 @@ export class ProductCard extends HTMLElement {
         </div>
         <div class="product-item__actions">
           ${stockButton("increase", product.id, `Aumentar estoque de ${escapeHtml(product.name)}`, "+")}
+          <button class="icon-btn icon-btn-info" type="button" data-action="info" data-id="${product.id}" aria-label="Informacoes de ${escapeHtml(product.name)}">
+            <span class="icon-btn-info__glyph" aria-hidden="true">i</span>
+          </button>
           <button class="icon-btn icon-btn-edit" type="button" data-action="edit" data-id="${product.id}" aria-label="Editar ${escapeHtml(product.name)}">
             <span class="icon-mask" aria-hidden="true" style="--icon-url: url('${editIconUrl}')"></span>
           </button>
