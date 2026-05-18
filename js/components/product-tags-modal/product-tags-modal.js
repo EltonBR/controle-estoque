@@ -1,3 +1,6 @@
+import { setBodyModalLock } from "../../utils/modal-lock.js";
+import { normalizeTag, normalizeTagList } from "../../utils/tag-utils.js";
+
 const template = document.createElement("template");
 template.innerHTML = `
   <div class="tags-modal" hidden>
@@ -19,18 +22,6 @@ template.innerHTML = `
     </div>
   </div>
 `;
-
-function setBodyModalLock(locked) {
-  const currentCount = Number(document.body.dataset.modalCount ?? "0");
-  const nextCount = locked ? currentCount + 1 : Math.max(0, currentCount - 1);
-
-  document.body.dataset.modalCount = String(nextCount);
-  document.body.classList.toggle("modal-open", nextCount > 0);
-}
-
-function normalizeTag(value) {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
 
 export class ProductTagsModal extends HTMLElement {
   #availableTags = [];
@@ -55,14 +46,8 @@ export class ProductTagsModal extends HTMLElement {
   }
 
   open({ availableTags = [], selectedTags = [] } = {}) {
-    this.#availableTags = Array.isArray(availableTags)
-      ? availableTags.map((tag) => normalizeTag(tag)).filter(Boolean)
-      : [];
-    this.#selectedTags = new Set(
-      Array.isArray(selectedTags)
-        ? selectedTags.map((tag) => normalizeTag(tag)).filter(Boolean)
-        : [],
-    );
+    this.#availableTags = normalizeTagList(availableTags);
+    this.#selectedTags = new Set(normalizeTagList(selectedTags));
     this.#render();
     this.modal.hidden = false;
     setBodyModalLock(true);

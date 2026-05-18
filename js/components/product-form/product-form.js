@@ -1,5 +1,7 @@
 import "../product-camera-modal/product-camera-modal.js";
+import "../product-price-history-editor/product-price-history-editor.js";
 import "../product-tags-modal/product-tags-modal.js";
+import { normalizeTagList } from "../../utils/tag-utils.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -56,12 +58,7 @@ template.innerHTML = `
         <textarea id="notes" name="notes" rows="3" maxlength="300"></textarea>
       </div>
       <div class="field">
-        <div class="field-history-header">
-          <label>Historico de preco</label>
-          <button class="btn btn-secondary btn-history-add" type="button" data-action="add-price-history">Adicionar preco</button>
-        </div>
-        <div class="price-history-list" data-role="price-history-list"></div>
-        <div class="field-media-status" data-role="price-history-status">Nenhum preco registrado.</div>
+        <product-price-history-editor></product-price-history-editor>
       </div>
       <div class="field">
         <div class="field-history-header">
@@ -85,7 +82,6 @@ template.innerHTML = `
 export class ProductForm extends HTMLElement {
   #editingProduct = null;
   #selectedImage = "";
-  #priceHistory = [];
   #tags = [];
   #availableTags = [];
 
@@ -97,8 +93,7 @@ export class ProductForm extends HTMLElement {
     this.feedback = this.querySelector(".feedback");
     this.imageInput = this.querySelector("#image");
     this.imageStatus = this.querySelector('[data-role="image-status"]');
-    this.priceHistoryList = this.querySelector('[data-role="price-history-list"]');
-    this.priceHistoryStatus = this.querySelector('[data-role="price-history-status"]');
+    this.priceHistoryEditor = this.querySelector("product-price-history-editor");
     this.tagsPreview = this.querySelector('[data-role="tags-preview"]');
     this.tagsStatus = this.querySelector('[data-role="tags-status"]');
     this.tagsModal = this.querySelector("product-tags-modal");
@@ -107,7 +102,6 @@ export class ProductForm extends HTMLElement {
 
   connectedCallback() {
     this.form.addEventListener("submit", this.#handleSubmit);
-    this.form.addEventListener("input", this.#handleInput);
     this.querySelector('[data-action="reset"]').addEventListener("click", () => this.reset());
     this.imageInput.addEventListener("change", this.#handleImageChange);
     this.addEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
@@ -117,7 +111,6 @@ export class ProductForm extends HTMLElement {
 
   disconnectedCallback() {
     this.form.removeEventListener("submit", this.#handleSubmit);
-    this.form.removeEventListener("input", this.#handleInput);
     this.imageInput.removeEventListener("change", this.#handleImageChange);
     this.removeEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
     this.removeEventListener("product-tags-save", this.#handleTagsSave);
@@ -146,13 +139,12 @@ export class ProductForm extends HTMLElement {
   reset() {
     this.#editingProduct = null;
     this.#selectedImage = "";
-    this.#priceHistory = [];
     this.#tags = [];
     this.form.reset();
     this.titleElement.textContent = "Cadastrar produto";
     this.#setFeedback("", "");
     this.#setImageStatus("");
-    this.#renderPriceHistory();
+    this.priceHistoryEditor.reset();
     this.#renderTags();
     this.tagsModal.close();
     this.cameraModal.close();
@@ -181,17 +173,11 @@ export class ProductForm extends HTMLElement {
       product.shelfLifeMonths === null || product.shelfLifeMonths === undefined ? "" : String(product.shelfLifeMonths);
     this.form.elements.namedItem("notes").value = product.notes ?? "";
     this.#selectedImage = product.image ?? "";
-    this.#priceHistory = Array.isArray(product.priceHistory)
-      ? product.priceHistory.map((entry) => ({
-          date: entry.date ?? "",
-          price: entry.price ?? "",
-        }))
-      : [];
+    this.priceHistoryEditor.entries = Array.isArray(product.priceHistory) ? product.priceHistory : [];
     this.#tags = Array.isArray(product.tags)
       ? product.tags.map((tag) => String(tag ?? "").trim()).filter(Boolean)
       : [];
     this.#setImageStatus(this.#selectedImage ? "Imagem atual carregada." : "");
-    this.#renderPriceHistory();
     this.#renderTags();
     this.#setFeedback("Modo de edicao ativo.", "success");
   }
@@ -235,81 +221,6 @@ export class ProductForm extends HTMLElement {
     this.imageStatus.textContent = message;
   }
 
-  #renderPriceHistory() {
-    this.priceHistoryList.innerHTML = "";
-
-    if (!this.#priceHistory.length) {
-      this.priceHistoryStatus.textContent = "Nenhum preco registrado.";
-      return;
-    }
-
-    this.priceHistoryStatus.textContent = `${this.#priceHistory.length} preco(s) registrado(s).`;
-
-    this.#priceHistory.forEach((entry, index) => {
-      const row = document.createElement("div");
-      row.className = "price-history-row";
-      row.innerHTML = `
-        <input type="date" value="${entry.date ?? ""}" data-action="change-price-history-date" data-index="${index}" aria-label="Data do preco ${index + 1}" />
-        <input type="number" min="0" step="0.01" inputmode="decimal" value="${entry.price ?? ""}" data-action="change-price-history-value" data-index="${index}" aria-label="Valor do preco ${index + 1}" placeholder="Valor em reais" />
-        <button class="btn btn-danger btn-history-remove" type="button" data-action="remove-price-history" data-index="${index}" aria-label="Remover preco ${index + 1}">
-          Remover
-        </button>
-      `;
-      this.priceHistoryList.appendChild(row);
-    });
-  }
-
-  #addPriceHistoryEntry() {
-    this.#priceHistory.push({
-      date: "",
-      price: "",
-    });
-    this.#renderPriceHistory();
-  }
-
-  #updatePriceHistoryEntry(index, key, value) {
-    const entry = this.#priceHistory[index];
-
-    if (!entry) {
-      return;
-    }
-
-    entry[key] = value;
-  }
-
-  #removePriceHistoryEntry(index) {
-    this.#priceHistory.splice(index, 1);
-    this.#renderPriceHistory();
-  }
-
-  #normalizePriceHistory() {
-    const normalized = [];
-
-    for (const entry of this.#priceHistory) {
-      const date = String(entry.date ?? "").trim();
-      const priceRaw = String(entry.price ?? "").trim();
-
-      if (!date && !priceRaw) {
-        continue;
-      }
-
-      const price = Number(priceRaw);
-
-      if (!date) {
-        throw new Error("Informe a data em todos os itens do historico de preco.");
-      }
-
-      if (!priceRaw || !Number.isFinite(price) || price < 0) {
-        throw new Error("Informe um valor valido em reais para todos os itens do historico de preco.");
-      }
-
-      normalized.push({ date, price });
-    }
-
-    normalized.sort((a, b) => String(b.date).localeCompare(String(a.date)));
-    return normalized;
-  }
-
   #renderTags() {
     this.tagsPreview.innerHTML = "";
 
@@ -326,30 +237,6 @@ export class ProductForm extends HTMLElement {
       chip.textContent = tag;
       this.tagsPreview.appendChild(chip);
     });
-  }
-
-  #normalizeTags(tags) {
-    const unique = [];
-    const seen = new Set();
-
-    for (const raw of tags) {
-      const normalized = String(raw ?? "").trim().replace(/\s+/g, " ");
-
-      if (!normalized) {
-        continue;
-      }
-
-      const key = normalized.toLocaleLowerCase("pt-BR");
-
-      if (seen.has(key)) {
-        continue;
-      }
-
-      seen.add(key);
-      unique.push(normalized);
-    }
-
-    return unique;
   }
 
   async #openCameraModal() {
@@ -378,12 +265,6 @@ export class ProductForm extends HTMLElement {
           selectedTags: this.#tags,
         });
         break;
-      case "add-price-history":
-        this.#addPriceHistoryEntry();
-        break;
-      case "remove-price-history":
-        this.#removePriceHistoryEntry(Number(button.dataset.index));
-        break;
       default:
         break;
     }
@@ -394,24 +275,6 @@ export class ProductForm extends HTMLElement {
     this.#setImageStatus(file ? `Arquivo selecionado: ${file.name}` : "");
   };
 
-  #handleInput = (event) => {
-    const field = event.target;
-
-    if (!(field instanceof HTMLInputElement)) {
-      return;
-    }
-
-    const index = Number(field.dataset.index);
-
-    if (field.dataset.action === "change-price-history-date") {
-      this.#updatePriceHistoryEntry(index, "date", field.value);
-    }
-
-    if (field.dataset.action === "change-price-history-value") {
-      this.#updatePriceHistoryEntry(index, "price", field.value);
-    }
-  };
-
   #handleCameraPhotoCaptured = (event) => {
     this.#selectedImage = event.detail.imageData ?? "";
     this.imageInput.value = "";
@@ -420,7 +283,7 @@ export class ProductForm extends HTMLElement {
   };
 
   #handleTagsSave = (event) => {
-    this.#tags = this.#normalizeTags(event.detail.tags ?? []);
+    this.#tags = normalizeTagList(event.detail.tags ?? []);
     this.#renderTags();
     this.#setFeedback("Tags atualizadas com sucesso.", "success");
   };
@@ -469,7 +332,7 @@ export class ProductForm extends HTMLElement {
 
     try {
       image = await this.#readSelectedFile();
-      priceHistory = this.#normalizePriceHistory();
+      priceHistory = this.priceHistoryEditor.normalize();
     } catch (error) {
       this.#setFeedback(error.message || "Nao foi possivel ler a imagem selecionada.", "error");
       return;
@@ -486,7 +349,7 @@ export class ProductForm extends HTMLElement {
       weightUnit: String(formData.get("weightUnit") ?? "g"),
       manufacturedAt,
       shelfLifeMonths,
-      tags: this.#normalizeTags(this.#tags),
+      tags: normalizeTagList(this.#tags),
       priceHistory,
       notes: String(formData.get("notes") ?? "").trim(),
       createdAt: this.#editingProduct?.createdAt ?? now,

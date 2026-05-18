@@ -63,11 +63,6 @@
   white-space: nowrap;
 }
 
-.price-history-list {
-  display: grid;
-  gap: 0.75rem;
-}
-
 .tags-preview {
   display: flex;
   flex-wrap: wrap;
@@ -82,13 +77,6 @@
   border-radius: 999px;
   background: var(--surface);
   font-size: 0.85rem;
-}
-
-.price-history-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: center;
 }
 
 .btn-history-remove {
@@ -137,10 +125,6 @@
   .field-media-picker {
     grid-template-columns: 1fr;
     display: grid;
-  }
-
-  .price-history-row {
-    grid-template-columns: 1fr;
   }
 
   .field-row--stock {

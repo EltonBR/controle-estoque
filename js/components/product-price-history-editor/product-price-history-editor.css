@@ -1,0 +1,17 @@
+.price-history-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.price-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .price-history-row {
+    grid-template-columns: 1fr;
+  }
+}
