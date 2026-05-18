@@ -1,3 +1,5 @@
+import "../product-camera-modal/product-camera-modal.js";
+
 const template = document.createElement("template");
 template.innerHTML = `
   <section class="card">
@@ -13,7 +15,13 @@ template.innerHTML = `
       </div>
       <div class="field">
         <label for="image">Imagem do produto</label>
-        <input id="image" name="image" type="file" accept="image/*" />
+        <div class="field-media-picker">
+          <input id="image" name="image" type="file" accept="image/*" />
+          <button class="btn btn-secondary btn-camera" type="button" data-action="open-camera" aria-label="Tirar foto com a camera">
+            Camera
+          </button>
+        </div>
+        <div class="field-media-status" data-role="image-status" hidden></div>
       </div>
       <div class="field">
         <label for="quantity">Quantidade</label>
@@ -43,6 +51,7 @@ template.innerHTML = `
       <div class="feedback" hidden></div>
     </form>
   </section>
+  <product-camera-modal></product-camera-modal>
 `;
 
 export class ProductForm extends HTMLElement {
@@ -55,15 +64,24 @@ export class ProductForm extends HTMLElement {
     this.form = this.querySelector("form");
     this.titleElement = this.querySelector("#title");
     this.feedback = this.querySelector(".feedback");
+    this.imageInput = this.querySelector("#image");
+    this.imageStatus = this.querySelector('[data-role="image-status"]');
+    this.cameraModal = this.querySelector("product-camera-modal");
   }
 
   connectedCallback() {
     this.form.addEventListener("submit", this.#handleSubmit);
     this.querySelector('[data-action="reset"]').addEventListener("click", () => this.reset());
+    this.imageInput.addEventListener("change", this.#handleImageChange);
+    this.addEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
+    this.addEventListener("click", this.#handleClick);
   }
 
   disconnectedCallback() {
     this.form.removeEventListener("submit", this.#handleSubmit);
+    this.imageInput.removeEventListener("change", this.#handleImageChange);
+    this.removeEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
+    this.removeEventListener("click", this.#handleClick);
   }
 
   set product(value) {
@@ -85,6 +103,8 @@ export class ProductForm extends HTMLElement {
     this.form.reset();
     this.titleElement.textContent = "Cadastrar produto";
     this.#setFeedback("", "");
+    this.#setImageStatus("");
+    this.cameraModal.close();
   }
 
   showMessage(message, variant = "success") {
@@ -107,6 +127,7 @@ export class ProductForm extends HTMLElement {
     this.form.elements.namedItem("weightUnit").value = product.weightUnit ?? "g";
     this.form.elements.namedItem("notes").value = product.notes ?? "";
     this.#selectedImage = product.image ?? "";
+    this.#setImageStatus(this.#selectedImage ? "Imagem atual carregada." : "");
     this.#setFeedback("Modo de edicao ativo.", "success");
   }
 
@@ -124,8 +145,7 @@ export class ProductForm extends HTMLElement {
   }
 
   async #readSelectedFile() {
-    const input = this.form.elements.namedItem("image");
-    const file = input?.files?.[0];
+    const file = this.imageInput?.files?.[0];
 
     if (!file) {
       return this.#selectedImage;
@@ -138,6 +158,54 @@ export class ProductForm extends HTMLElement {
       reader.readAsDataURL(file);
     });
   }
+
+  #setImageStatus(message) {
+    if (!message) {
+      this.imageStatus.hidden = true;
+      this.imageStatus.textContent = "";
+      return;
+    }
+
+    this.imageStatus.hidden = false;
+    this.imageStatus.textContent = message;
+  }
+
+  async #openCameraModal() {
+    try {
+      await this.cameraModal.open();
+    } catch (error) {
+      console.error(error);
+      this.#setFeedback(error.message || "Nao foi possivel acessar a camera.", "error");
+    }
+  }
+
+  #handleClick = (event) => {
+    const button = event.target.closest("button[data-action]");
+
+    if (!button || !this.contains(button)) {
+      return;
+    }
+
+    switch (button.dataset.action) {
+      case "open-camera":
+        this.#openCameraModal();
+        break;
+      default:
+        break;
+    }
+  };
+
+  #handleImageChange = () => {
+    const file = this.imageInput.files?.[0];
+    this.#setImageStatus(file ? `Arquivo selecionado: ${file.name}` : "");
+  };
+
+  #handleCameraPhotoCaptured = (event) => {
+    this.#selectedImage = event.detail.imageData ?? "";
+    this.imageInput.value = "";
+    this.#setImageStatus("Foto capturada com a camera.");
+    this.#setFeedback("Foto do produto capturada com sucesso.", "success");
+  };
 
   #handleSubmit = async (event) => {
     event.preventDefault();

@@ -6,139 +6,342 @@
 
 ## Objetivo
 
-Aplicacao web para controle de estoque da dispensa, feita com:
+Aplicacao web estatica para controle de estoque domestico, orientada a operacao rapida no navegador, com persistencia local e sem dependencia de bibliotecas externas.
 
-- HTML
-- CSS
-- JavaScript puro
+Stack atual:
+
+- HTML estatico
+- CSS puro
+- JavaScript puro com ES Modules
 - Web Components
 - IndexedDB
 
-Sem uso de bibliotecas externas no frontend.
+## Estado atual do projeto
 
-## Estrutura geral
+O projeto esta funcionalmente organizado em componentes isolados, cada um com:
 
-O projeto e um app estatico, carregado por `index.html`, com modulo principal em:
+- um diretorio proprio em `js/components/<nome-do-componente>/`
+- um arquivo JavaScript do componente
+- um arquivo CSS do componente
 
+O app atual suporta:
+
+- cadastro e edicao de produtos em modal
+- upload de imagem por arquivo
+- captura de imagem por webcam
+- busca por nome, codigo de barras e observacoes
+- ajuste rapido de estoque direto no card
+- exclusao com confirmacao
+- backup em JSON
+- restauracao completa do banco por arquivo JSON
+- tema claro/escuro com persistencia em `localStorage`
+
+## Arquitetura
+
+### Visao geral
+
+O sistema segue uma arquitetura de frontend local baseada em:
+
+1. `index.html` como ponto de entrada da pagina e agregador de CSS
+2. `js/app.js` como bootstrap minimo da aplicacao
+3. `inventory-app` como componente raiz e orquestrador de estado
+4. componentes filhos especializados para UI e interacoes
+5. `js/db.js` como camada de persistencia IndexedDB
+
+Nao existe backend. Toda a persistencia e local no navegador.
+
+### Camadas
+
+#### 1. Entrada da aplicacao
+
+Arquivos:
+
+- `index.html`
 - `js/app.js`
-- `js/components/inventory-app.js`
 
-Persistencia local:
+Responsabilidades:
+
+- carregar `styles.css` com tokens e estilos globais
+- carregar os CSS de cada componente
+- inicializar o componente raiz `inventory-app`
+
+#### 2. Camada de orquestracao
+
+Arquivo:
+
+- `js/components/inventory-app/inventory-app.js`
+
+Responsavel por:
+
+- manter estado em memoria da lista de produtos
+- carregar produtos do IndexedDB
+- aplicar busca
+- reagir a eventos disparados pelos componentes filhos
+- salvar, editar, excluir e ajustar estoque
+- controlar modal de produto
+- controlar modal de restauracao
+- gerar backup
+- aplicar tema claro/escuro
+- disparar toasts
+
+O `inventory-app` nao renderiza cada detalhe visual do sistema. Ele coordena componentes especializados.
+
+#### 3. Camada de componentes visuais
+
+Cada parte principal da interface esta encapsulada em um Web Component.
+
+#### 4. Camada de persistencia
+
+Arquivo:
 
 - `js/db.js`
 
-## Como foi desenvolvido
+Responsavel por:
 
-O app foi evoluindo incrementalmente a partir de uma interface simples com formulario e listagem. Ao longo das iteracoes, a estrutura foi refinada para:
+- abrir o banco IndexedDB
+- listar produtos
+- salvar produto
+- excluir produto
+- substituir toda a base em restauracao
 
-- separar a listagem em cards
-- usar componentes dedicados para partes importantes
-- melhorar responsividade para 16:9 e ultrawide
-- priorizar uso com leitor de codigo de barras
-- adicionar fluxo de backup e restauracao do banco
-- transformar feedbacks em toasts auto-dismissible
+## Estrutura atual de diretorios
 
-Depois, houve uma refatoracao para componentizar melhor:
+### Raiz
 
-- `product-card`
-- `product-modal`
-- `toast-message`
+- `index.html`
+- `styles.css`
+- `CONTEXTO_PROJETO.md`
+- `js/app.js`
+- `js/db.js`
+- `assets/`
 
-## Componentes atuais
+### Assets
+
+- `assets/icons/add.svg`
+- `assets/icons/backup.svg`
+- `assets/icons/delete.svg`
+- `assets/icons/edit.svg`
+- `assets/icons/restore.svg`
+- `assets/icons/theme.svg`
+- `assets/placeholder-product.svg`
+
+### Componentes
+
+- `js/components/inventory-app/`
+- `js/components/inventory-header/`
+- `js/components/product-camera-modal/`
+- `js/components/product-card/`
+- `js/components/product-form/`
+- `js/components/product-modal/`
+- `js/components/product-search/`
+- `js/components/product-table/`
+- `js/components/toast-message/`
+
+## Componentes e responsabilidades
 
 ### `inventory-app`
 
-Arquivo:
+Arquivos:
 
-- `js/components/inventory-app.js`
+- `js/components/inventory-app/inventory-app.js`
+- `js/components/inventory-app/inventory-app.css`
 
-Responsavel por:
+Responsabilidades:
 
-- orquestrar estado da aplicacao
-- carregar produtos do IndexedDB
-- aplicar busca
-- abrir e fechar modais
-- salvar, excluir e ajustar estoque
-- exportar backup
-- restaurar backup
-- disparar toasts de feedback
+- componente raiz do sistema
+- composicao do header, tabela/listagem, modal de produto e toast
+- sincronizacao entre UI e IndexedDB
+- filtro da listagem com base na busca
+- tratamento de eventos como:
+  - `header-action`
+  - `search-change`
+  - `save-product`
+  - `product-edit`
+  - `product-delete`
+  - `product-increase`
+  - `product-decrease`
+  - `product-modal-close`
+- backup e restauracao
+- aplicacao do tema salvo
 
-### `product-form`
+### `inventory-header`
 
-Arquivo:
+Arquivos:
 
-- `js/components/product-form.js`
+- `js/components/inventory-header/inventory-header.js`
+- `js/components/inventory-header/inventory-header.css`
 
-Responsavel por:
+Responsabilidades:
 
-- cadastro e edicao de produto
-- leitura de imagem via `input file`
-- validacao de nome, quantidade e peso
-- emissao do evento `save-product`
-
-### `product-modal`
-
-Arquivo:
-
-- `js/components/product-modal.js`
-
-Responsavel por:
-
-- encapsular o modal de cadastro/edicao
-- abrir com produto existente ou vazio
-- fechar por botao ou backdrop
+- renderizar header fixo
+- encapsular:
+  - titulo
+  - busca principal
+  - botoes de acao
+- emitir evento `header-action` com as acoes:
+  - `open-create`
+  - `backup-db`
+  - `open-restore`
+  - `toggle-theme`
 
 ### `product-search`
 
-Arquivo:
+Arquivos:
 
-- `js/components/product-search.js`
+- `js/components/product-search/product-search.js`
+- `js/components/product-search/product-search.css`
 
-Responsavel por:
+Responsabilidades:
 
 - campo de busca principal
-- foco rapido para leitura por codigo de barras
+- botao de limpar
+- foco rapido para operacao com leitor de codigo de barras
 - emissao do evento `search-change`
 
 ### `product-table`
 
-Arquivo:
+Arquivos:
 
-- `js/components/product-table.js`
+- `js/components/product-table/product-table.js`
+- `js/components/product-table/product-table.css`
 
-Responsavel por:
+Responsabilidades:
 
-- renderizar a grade de produtos
-- mostrar estado vazio
-- instanciar um `product-card` para cada item
+- renderizar a grade responsiva de produtos
+- exibir contador
+- exibir estado vazio
+- instanciar um `product-card` por item
 
 ### `product-card`
 
-Arquivo:
+Arquivos:
 
-- `js/components/product-card.js`
+- `js/components/product-card/product-card.js`
+- `js/components/product-card/product-card.css`
 
-Responsavel por:
+Responsabilidades:
 
-- renderizar visualmente cada produto
-- exibir imagem, nome, peso, codigo de barras, observacoes e quantidade
-- expor acoes de:
-  - aumentar estoque
-  - diminuir estoque
-  - editar
-  - excluir
+- renderizacao visual de cada produto
+- uso de placeholder quando nao ha imagem
+- exibir:
+  - imagem
+  - quantidade
+  - nome
+  - peso
+  - codigo de barras
+  - observacoes
+- emitir eventos de acao:
+  - `product-edit`
+  - `product-delete`
+  - `product-increase`
+  - `product-decrease`
+
+### `product-modal`
+
+Arquivos:
+
+- `js/components/product-modal/product-modal.js`
+- `js/components/product-modal/product-modal.css`
+
+Responsabilidades:
+
+- encapsular o modal de cadastro/edicao
+- abrir com produto vazio ou existente
+- delegar o formulario para `product-form`
+- emitir `product-modal-close`
+
+### `product-form`
+
+Arquivos:
+
+- `js/components/product-form/product-form.js`
+- `js/components/product-form/product-form.css`
+
+Responsabilidades:
+
+- formulario de cadastro e edicao
+- validacao de:
+  - nome
+  - quantidade
+  - peso
+- leitura de imagem por `input[type=file]`
+- abertura do modal de camera
+- consumo do evento `camera-photo-captured`
+- emissao do evento `save-product`
+
+### `product-camera-modal`
+
+Arquivos:
+
+- `js/components/product-camera-modal/product-camera-modal.js`
+- `js/components/product-camera-modal/product-camera-modal.css`
+
+Responsabilidades:
+
+- encapsular captura de foto por webcam
+- abrir e fechar modal proprio
+- solicitar permissao de camera com `getUserMedia`
+- mostrar preview de video
+- capturar frame para `data URL`
+- emitir evento `camera-photo-captured`
 
 ### `toast-message`
 
-Arquivo:
+Arquivos:
 
-- `js/components/toast-message.js`
+- `js/components/toast-message/toast-message.js`
+- `js/components/toast-message/toast-message.css`
 
-Responsavel por:
+Responsabilidades:
 
-- exibir mensagens flutuantes no canto superior direito
-- auto-dismiss em mensagens de sucesso
-- barra de progresso visual
+- exibir feedback no canto superior direito
+- suportar variants de sucesso e erro
+- auto-dismiss para sucesso
+- barra de progresso visual nas mensagens temporizadas
+
+## Fluxo de dados e eventos
+
+### Fluxo principal
+
+1. `inventory-app` carrega produtos com `getAllProducts()`
+2. produtos vao para `product-table`
+3. `product-table` instancia `product-card`
+4. acoes dos cards sobem por eventos customizados
+5. `inventory-app` persiste alteracoes em `js/db.js`
+6. `inventory-app` rerenderiza a listagem
+
+### Fluxo de busca
+
+1. usuario digita em `product-search`
+2. componente emite `search-change`
+3. `inventory-app` atualiza `#query`
+4. filtro e reaplicado na lista em memoria
+
+### Fluxo de cadastro/edicao
+
+1. usuario abre cadastro pelo header ou edita por um card
+2. `inventory-app` abre `product-modal`
+3. `product-form` valida os dados
+4. `product-form` emite `save-product`
+5. `inventory-app` persiste no IndexedDB
+6. listagem e feedback sao atualizados
+
+### Fluxo de imagem por camera
+
+1. usuario clica em `Camera` no `product-form`
+2. `product-form` abre `product-camera-modal`
+3. modal solicita acesso a webcam
+4. usuario captura a foto
+5. `product-camera-modal` emite `camera-photo-captured`
+6. `product-form` armazena a imagem em `#selectedImage`
+
+### Fluxo de tema
+
+1. usuario clica no botao de tema no `inventory-header`
+2. header emite `header-action` com `toggle-theme`
+3. `inventory-app` alterna entre `light` e `dark`
+4. tema e salvo em `localStorage`
+5. `document.documentElement.dataset.theme` e atualizado
 
 ## Persistencia
 
@@ -154,7 +357,7 @@ Store:
 
 - `produtos`
 
-Campos relevantes atualmente usados pelos produtos:
+Campos usados no produto:
 
 - `id`
 - `name`
@@ -167,96 +370,97 @@ Campos relevantes atualmente usados pelos produtos:
 - `createdAt`
 - `updatedAt`
 
+## Estilo e organizacao de CSS
+
+### `styles.css`
+
+Contem apenas:
+
+- tokens CSS
+- tema claro
+- tema escuro
+- reset/base global
+- estilos compartilhados de baixo nivel, como `body`, `button`, `.btn`, `.card`
+
+### CSS por componente
+
+Cada componente possui um arquivo CSS proprio ao lado do JS. Isso melhora:
+
+- localizacao de regras
+- manutencao
+- isolamento conceitual
+- previsibilidade durante refatoracao
+
+Atualmente os CSS dos componentes sao carregados pelo `index.html`.
+
 ## Funcionalidades implementadas
 
-### Cadastro de produto
+### Produtos
 
-- nome
-- codigo de barras
-- imagem opcional
-- quantidade em unidades
-- peso
-- unidade de peso (`g` ou `kg`)
-- observacoes
+- cadastro
+- edicao
+- exclusao
+- listagem por cards
+- ajuste rapido de estoque
+- busca textual
 
-### Edicao
+### Imagens
 
-- edita produto existente no mesmo formulario do cadastro
-- formulario aberto em modal
+- upload manual por arquivo
+- captura por webcam
+- armazenamento em `data URL`
+- placeholder local se nao houver imagem
 
-### Exclusao
+### Persistencia e recuperacao
 
-- remocao com confirmacao via `window.confirm`
+- IndexedDB local
+- backup em `.json`
+- restauracao completa por arquivo
 
-### Busca
+### Experiencia de uso
 
-- por nome
-- por codigo de barras
-- por observacoes
-
-### Estoque rapido
-
-- botoes `+` e `-` em cada card
-- ajuste imediato persistido no IndexedDB
-
-### Imagem do produto
-
-- upload opcional por arquivo
-- imagem salva como `data URL`
-- placeholder local quando nao ha imagem
-
-### Backup
-
-- gera arquivo `.json` com todos os produtos
-
-### Restauracao
-
-- leitura de arquivo `.json`
-- substitui os produtos atuais do IndexedDB
-
-### Toasts
-
-- feedback visual de sucesso e erro
-- sucesso com auto-dismiss
-- barra fina de progresso no rodape
-
-## Layout atual
-
-### Header fixo
-
-Possui:
-
-- titulo do sistema
-- busca central
-- botoes de acao com icones SVG:
-  - cadastrar produto
-  - backup
-  - restaurar
-
-### Listagem
-
-- cards em grid responsivo
-- sem container visual branco externo
-- foco em uso rapido
-
-### Card do produto
-
-Ordem visual atual:
-
-- imagem
-- selo de quantidade no canto superior direito da imagem
-- nome
-- peso em destaque leve
-- codigo de barras
-- observacao em caixinha
-- acoes na ultima linha
+- header fixo
+- foco inicial orientado ao fluxo operacional
+- responsividade com grid adaptativo
+- faixa tablet com 4 itens por linha perto de `1024px`
+- tema claro/escuro
+- toast de sucesso e erro
 
 ## Regras atuais de comportamento
 
 ### Foco
 
 - se houver produtos, foco vai para a busca
-- se nao houver produtos, abre o modal de cadastro e foca o campo de codigo de barras
+- se nao houver produtos, o modal de cadastro abre automaticamente
+- ao abrir o formulario, o foco preferencial vai para o campo de codigo de barras
+
+### Exclusao
+
+- confirmacao via `window.confirm`
+
+### Restauracao
+
+- restaurar substitui integralmente a base local atual
+
+### Captura de imagem
+
+- depende de permissao do navegador para webcam
+- a foto capturada substitui a selecao anterior do `input file`
+
+## Observacoes tecnicas
+
+- nao ha framework, bundler ou transpiler
+- o app depende de navegador com suporte moderno a:
+  - ES Modules
+  - Custom Elements
+  - IndexedDB
+  - `localStorage`
+  - `navigator.mediaDevices.getUserMedia`
+- o carregamento dos estilos ainda e centralizado em `index.html`, mesmo com CSS por componente
+
+## Resumo arquitetural
+
+O estado central da aplicacao vive em `inventory-app`, a persistencia vive em `db.js` e a interface foi fragmentada em componentes especializados com eventos customizados para comunicacao. A organizacao atual privilegia separacao de responsabilidades, baixo acoplamento entre elementos visuais e manutencao incremental sem introduzir dependencias externas.
 
 ### Ordenacao
 
@@ -330,13 +534,15 @@ Ainda usa `window.confirm`, sem modal customizado.
 - `styles.css`
 - `js/app.js`
 - `js/db.js`
-- `js/components/inventory-app.js`
-- `js/components/product-form.js`
-- `js/components/product-modal.js`
-- `js/components/product-search.js`
-- `js/components/product-table.js`
-- `js/components/product-card.js`
-- `js/components/toast-message.js`
+- `js/components/inventory-app/inventory-app.js`
+- `js/components/inventory-header/inventory-header.js`
+- `js/components/product-search/product-search.js`
+- `js/components/product-table/product-table.js`
+- `js/components/product-card/product-card.js`
+- `js/components/product-modal/product-modal.js`
+- `js/components/product-form/product-form.js`
+- `js/components/product-camera-modal/product-camera-modal.js`
+- `js/components/toast-message/toast-message.js`
 
 ## Execucao local
 

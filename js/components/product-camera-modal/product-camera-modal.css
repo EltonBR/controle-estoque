@@ -1,0 +1,76 @@
+.camera-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.camera-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--modal-backdrop);
+}
+
+.camera-modal__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(42rem, calc(100vw - 1.5rem));
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 1rem;
+}
+
+.camera-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.camera-modal__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.camera-modal__close {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.3125rem;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.camera-modal__body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.camera-modal__video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 0.3125rem;
+  background: #000;
+  object-fit: cover;
+}
+
+.camera-modal__hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.camera-modal .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

@@ -1,6 +1,7 @@
 import { deleteProduct, getAllProducts, replaceAllProducts, saveProduct } from "../../db.js";
 import "../inventory-header/inventory-header.js";
 import "../product-modal/product-modal.js";
+import "../restore-database-modal/restore-database-modal.js";
 import "../product-table/product-table.js";
 import "../toast-message/toast-message.js";
 
@@ -18,27 +19,7 @@ template.innerHTML = `
     </section>
   </main>
   <product-modal></product-modal>
-  <div class="modal" data-modal="restore" hidden>
-    <div class="modal__backdrop" data-action="close-restore"></div>
-    <div class="modal__dialog">
-      <button class="modal__close" type="button" data-action="close-restore" aria-label="Fechar restauracao">×</button>
-      <section class="card">
-        <h2>Restaurar banco de dados</h2>
-        <form class="field-grid" data-role="restore-form">
-          <div class="field">
-            <label for="restore-file">Arquivo de backup</label>
-            <input id="restore-file" name="restoreFile" type="file" accept="application/json,.json" required />
-          </div>
-          <div class="feedback">A restauracao substitui todos os produtos atuais pelos dados do arquivo selecionado.</div>
-          <div class="actions">
-            <button class="btn btn-primary" type="submit">Restaurar</button>
-            <button class="btn btn-secondary" type="button" data-action="close-restore">Cancelar</button>
-          </div>
-          <div class="feedback" data-role="restore-feedback" hidden></div>
-        </form>
-      </section>
-    </div>
-  </div>
+  <restore-database-modal></restore-database-modal>
 `;
 
 export class InventoryApp extends HTMLElement {
@@ -55,9 +36,7 @@ export class InventoryApp extends HTMLElement {
     this.search = this.querySelector("product-search");
     this.table = this.querySelector("product-table");
     this.toast = this.querySelector("toast-message");
-    this.restoreModal = this.querySelector('[data-modal="restore"]');
-    this.restoreForm = this.querySelector('[data-role="restore-form"]');
-    this.restoreFeedback = this.querySelector('[data-role="restore-feedback"]');
+    this.restoreModal = this.querySelector("restore-database-modal");
   }
 
   connectedCallback() {
@@ -70,8 +49,8 @@ export class InventoryApp extends HTMLElement {
     this.addEventListener("product-increase", this.#onAdjustStock);
     this.addEventListener("product-decrease", this.#onAdjustStock);
     this.addEventListener("product-modal-close", this.#onProductModalClose);
-    this.addEventListener("click", this.#onClick);
-    this.restoreForm.addEventListener("submit", this.#onRestoreSubmit);
+    this.addEventListener("restore-database-close", this.#onRestoreModalClose);
+    this.addEventListener("restore-database-submit", this.#onRestoreSubmit);
     window.addEventListener("keydown", this.#onWindowKeydown);
     this.#loadProducts();
   }
@@ -85,8 +64,8 @@ export class InventoryApp extends HTMLElement {
     this.removeEventListener("product-increase", this.#onAdjustStock);
     this.removeEventListener("product-decrease", this.#onAdjustStock);
     this.removeEventListener("product-modal-close", this.#onProductModalClose);
-    this.removeEventListener("click", this.#onClick);
-    this.restoreForm.removeEventListener("submit", this.#onRestoreSubmit);
+    this.removeEventListener("restore-database-close", this.#onRestoreModalClose);
+    this.removeEventListener("restore-database-submit", this.#onRestoreSubmit);
     window.removeEventListener("keydown", this.#onWindowKeydown);
   }
 
@@ -232,21 +211,6 @@ export class InventoryApp extends HTMLElement {
     }
   };
 
-  #onClick = (event) => {
-    const button = event.target.closest("button[data-action]");
-    if (!button) {
-      return;
-    }
-
-    switch (button.dataset.action) {
-      case "close-restore":
-        this.#closeRestoreModal();
-        break;
-      default:
-        break;
-    }
-  };
-
   #onHeaderAction = (event) => {
     switch (event.detail.action) {
       case "open-create":
@@ -276,7 +240,7 @@ export class InventoryApp extends HTMLElement {
       return;
     }
 
-    if (!this.restoreModal.hidden) {
+    if (this.restoreModal.isOpen) {
       this.#closeRestoreModal();
     }
   };
@@ -320,16 +284,11 @@ export class InventoryApp extends HTMLElement {
   };
 
   #openRestoreModal() {
-    this.restoreModal.hidden = false;
-    this.restoreForm.reset();
-    this.#setRestoreFeedback("", "");
-    requestAnimationFrame(() => this.restoreForm.elements.namedItem("restoreFile")?.focus());
+    this.restoreModal.open();
   }
 
   #closeRestoreModal() {
-    this.restoreModal.hidden = true;
-    this.restoreForm.reset();
-    this.#setRestoreFeedback("", "");
+    this.restoreModal.close();
 
     if (this.#products.length > 0) {
       this.search.focusSearch();
@@ -353,26 +312,11 @@ export class InventoryApp extends HTMLElement {
     this.#showStatus("Backup do banco de dados gerado com sucesso.", "success");
   }
 
-  #setRestoreFeedback(message, variant) {
-    if (!message) {
-      this.restoreFeedback.hidden = true;
-      this.restoreFeedback.textContent = "";
-      this.restoreFeedback.dataset.variant = "";
-      return;
-    }
-
-    this.restoreFeedback.hidden = false;
-    this.restoreFeedback.textContent = message;
-    this.restoreFeedback.dataset.variant = variant;
-  }
-
   #onRestoreSubmit = async (event) => {
-    event.preventDefault();
-    const input = this.restoreForm.elements.namedItem("restoreFile");
-    const file = input?.files?.[0];
+    const { file } = event.detail;
 
     if (!file) {
-      this.#setRestoreFeedback("Selecione um arquivo de backup.", "error");
+      this.restoreModal.setFeedback("Selecione um arquivo de backup.", "error");
       return;
     }
 
@@ -393,8 +337,12 @@ export class InventoryApp extends HTMLElement {
       this.#syncPreferredFocus();
     } catch (error) {
       console.error(error);
-      this.#setRestoreFeedback("Nao foi possivel restaurar o arquivo selecionado.", "error");
+      this.restoreModal.setFeedback("Nao foi possivel restaurar o arquivo selecionado.", "error");
     }
+  };
+
+  #onRestoreModalClose = () => {
+    this.#closeRestoreModal();
   };
 }
 
