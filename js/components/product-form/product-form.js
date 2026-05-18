@@ -1,4 +1,5 @@
 import "../product-camera-modal/product-camera-modal.js";
+import "../product-tags-modal/product-tags-modal.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -52,6 +53,14 @@ template.innerHTML = `
         <div class="price-history-list" data-role="price-history-list"></div>
         <div class="field-media-status" data-role="price-history-status">Nenhum preco registrado.</div>
       </div>
+      <div class="field">
+        <div class="field-history-header">
+          <label>Tags</label>
+          <button class="btn btn-secondary btn-history-add" type="button" data-action="open-tags-modal">Gerenciar tags</button>
+        </div>
+        <div class="tags-preview" data-role="tags-preview"></div>
+        <div class="field-media-status" data-role="tags-status">Nenhuma tag adicionada.</div>
+      </div>
       <div class="actions">
         <button class="btn btn-primary" type="submit">Salvar</button>
         <button class="btn btn-secondary" type="button" data-action="reset">Limpar</button>
@@ -59,6 +68,7 @@ template.innerHTML = `
       <div class="feedback" hidden></div>
     </form>
   </section>
+  <product-tags-modal></product-tags-modal>
   <product-camera-modal></product-camera-modal>
 `;
 
@@ -66,6 +76,8 @@ export class ProductForm extends HTMLElement {
   #editingProduct = null;
   #selectedImage = "";
   #priceHistory = [];
+  #tags = [];
+  #availableTags = [];
 
   constructor() {
     super();
@@ -77,6 +89,9 @@ export class ProductForm extends HTMLElement {
     this.imageStatus = this.querySelector('[data-role="image-status"]');
     this.priceHistoryList = this.querySelector('[data-role="price-history-list"]');
     this.priceHistoryStatus = this.querySelector('[data-role="price-history-status"]');
+    this.tagsPreview = this.querySelector('[data-role="tags-preview"]');
+    this.tagsStatus = this.querySelector('[data-role="tags-status"]');
+    this.tagsModal = this.querySelector("product-tags-modal");
     this.cameraModal = this.querySelector("product-camera-modal");
   }
 
@@ -86,6 +101,7 @@ export class ProductForm extends HTMLElement {
     this.querySelector('[data-action="reset"]').addEventListener("click", () => this.reset());
     this.imageInput.addEventListener("change", this.#handleImageChange);
     this.addEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
+    this.addEventListener("product-tags-save", this.#handleTagsSave);
     this.addEventListener("click", this.#handleClick);
   }
 
@@ -94,6 +110,7 @@ export class ProductForm extends HTMLElement {
     this.form.removeEventListener("input", this.#handleInput);
     this.imageInput.removeEventListener("change", this.#handleImageChange);
     this.removeEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
+    this.removeEventListener("product-tags-save", this.#handleTagsSave);
     this.removeEventListener("click", this.#handleClick);
   }
 
@@ -106,6 +123,12 @@ export class ProductForm extends HTMLElement {
     return this.#editingProduct;
   }
 
+  set availableTags(value) {
+    this.#availableTags = Array.isArray(value)
+      ? value.map((tag) => String(tag ?? "").trim()).filter(Boolean)
+      : [];
+  }
+
   focusBarcode() {
     this.form.elements.namedItem("barcode")?.focus();
   }
@@ -114,11 +137,14 @@ export class ProductForm extends HTMLElement {
     this.#editingProduct = null;
     this.#selectedImage = "";
     this.#priceHistory = [];
+    this.#tags = [];
     this.form.reset();
     this.titleElement.textContent = "Cadastrar produto";
     this.#setFeedback("", "");
     this.#setImageStatus("");
     this.#renderPriceHistory();
+    this.#renderTags();
+    this.tagsModal.close();
     this.cameraModal.close();
   }
 
@@ -148,8 +174,12 @@ export class ProductForm extends HTMLElement {
           price: entry.price ?? "",
         }))
       : [];
+    this.#tags = Array.isArray(product.tags)
+      ? product.tags.map((tag) => String(tag ?? "").trim()).filter(Boolean)
+      : [];
     this.#setImageStatus(this.#selectedImage ? "Imagem atual carregada." : "");
     this.#renderPriceHistory();
+    this.#renderTags();
     this.#setFeedback("Modo de edicao ativo.", "success");
   }
 
@@ -267,6 +297,48 @@ export class ProductForm extends HTMLElement {
     return normalized;
   }
 
+  #renderTags() {
+    this.tagsPreview.innerHTML = "";
+
+    if (!this.#tags.length) {
+      this.tagsStatus.textContent = "Nenhuma tag adicionada.";
+      return;
+    }
+
+    this.tagsStatus.textContent = `${this.#tags.length} tag(s) adicionada(s).`;
+
+    this.#tags.forEach((tag) => {
+      const chip = document.createElement("span");
+      chip.className = "tags-preview__chip";
+      chip.textContent = tag;
+      this.tagsPreview.appendChild(chip);
+    });
+  }
+
+  #normalizeTags(tags) {
+    const unique = [];
+    const seen = new Set();
+
+    for (const raw of tags) {
+      const normalized = String(raw ?? "").trim().replace(/\s+/g, " ");
+
+      if (!normalized) {
+        continue;
+      }
+
+      const key = normalized.toLocaleLowerCase("pt-BR");
+
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      unique.push(normalized);
+    }
+
+    return unique;
+  }
+
   async #openCameraModal() {
     try {
       await this.cameraModal.open();
@@ -286,6 +358,12 @@ export class ProductForm extends HTMLElement {
     switch (button.dataset.action) {
       case "open-camera":
         this.#openCameraModal();
+        break;
+      case "open-tags-modal":
+        this.tagsModal.open({
+          availableTags: this.#availableTags,
+          selectedTags: this.#tags,
+        });
         break;
       case "add-price-history":
         this.#addPriceHistoryEntry();
@@ -326,6 +404,12 @@ export class ProductForm extends HTMLElement {
     this.imageInput.value = "";
     this.#setImageStatus("Foto capturada com a camera.");
     this.#setFeedback("Foto do produto capturada com sucesso.", "success");
+  };
+
+  #handleTagsSave = (event) => {
+    this.#tags = this.#normalizeTags(event.detail.tags ?? []);
+    this.#renderTags();
+    this.#setFeedback("Tags atualizadas com sucesso.", "success");
   };
 
   #handleSubmit = async (event) => {
@@ -374,6 +458,7 @@ export class ProductForm extends HTMLElement {
       quantity,
       weight,
       weightUnit: String(formData.get("weightUnit") ?? "g"),
+      tags: this.#normalizeTags(this.#tags),
       priceHistory,
       notes: String(formData.get("notes") ?? "").trim(),
       createdAt: this.#editingProduct?.createdAt ?? now,

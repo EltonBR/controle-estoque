@@ -1,5 +1,13 @@
-import { deleteProduct, getAllProducts, replaceAllProducts, saveProduct } from "../../db.js";
+import {
+  deleteProduct,
+  getAllProducts,
+  getPredefinedTags,
+  replaceAllProducts,
+  savePredefinedTags,
+  saveProduct,
+} from "../../db.js";
 import "../inventory-header/inventory-header.js";
+import "../predefined-tags-modal/predefined-tags-modal.js";
 import "../product-info-modal/product-info-modal.js";
 import "../product-modal/product-modal.js";
 import "../restore-database-modal/restore-database-modal.js";
@@ -19,6 +27,7 @@ template.innerHTML = `
       </div>
     </section>
   </main>
+  <predefined-tags-modal></predefined-tags-modal>
   <product-info-modal></product-info-modal>
   <product-modal></product-modal>
   <restore-database-modal></restore-database-modal>
@@ -28,11 +37,13 @@ export class InventoryApp extends HTMLElement {
   #products = [];
   #query = "";
   #theme = "light";
+  #predefinedTags = [];
 
   constructor() {
     super();
     this.appendChild(template.content.cloneNode(true));
     this.header = this.querySelector("inventory-header");
+    this.predefinedTagsModal = this.querySelector("predefined-tags-modal");
     this.infoModal = this.querySelector("product-info-modal");
     this.productModal = this.querySelector("product-modal");
     this.form = this.productModal.form;
@@ -45,6 +56,7 @@ export class InventoryApp extends HTMLElement {
   connectedCallback() {
     this.#initializeTheme();
     this.addEventListener("header-action", this.#onHeaderAction);
+    this.addEventListener("predefined-tags-save", this.#onPredefinedTagsSave);
     this.addEventListener("save-product", this.#onSaveProduct);
     this.addEventListener("search-change", this.#onSearchChange);
     this.addEventListener("product-edit", this.#onEditProduct);
@@ -57,11 +69,21 @@ export class InventoryApp extends HTMLElement {
     this.addEventListener("restore-database-close", this.#onRestoreModalClose);
     this.addEventListener("restore-database-submit", this.#onRestoreSubmit);
     window.addEventListener("keydown", this.#onWindowKeydown);
-    this.#loadProducts();
+    this.#initializePredefinedTags()
+      .catch((error) => {
+        console.error(error);
+        this.#predefinedTags = [];
+        this.form.availableTags = this.#predefinedTags;
+        this.#showStatus("Falha ao carregar as tags predefinidas.", "error");
+      })
+      .finally(() => {
+        this.#loadProducts();
+      });
   }
 
   disconnectedCallback() {
     this.removeEventListener("header-action", this.#onHeaderAction);
+    this.removeEventListener("predefined-tags-save", this.#onPredefinedTagsSave);
     this.removeEventListener("save-product", this.#onSaveProduct);
     this.removeEventListener("search-change", this.#onSearchChange);
     this.removeEventListener("product-edit", this.#onEditProduct);
@@ -79,6 +101,7 @@ export class InventoryApp extends HTMLElement {
   async #loadProducts() {
     try {
       this.#products = await getAllProducts();
+      this.form.availableTags = this.#predefinedTags;
       this.#render();
       this.#syncPreferredFocus();
     } catch (error) {
@@ -96,6 +119,7 @@ export class InventoryApp extends HTMLElement {
             product.name,
             product.barcode,
             product.notes,
+            ...(Array.isArray(product.tags) ? product.tags : []),
           ]
             .join(" ")
             .toLocaleLowerCase("pt-BR");
@@ -233,6 +257,9 @@ export class InventoryApp extends HTMLElement {
       case "open-restore":
         this.#openRestoreModal();
         break;
+      case "open-predefined-tags":
+        this.predefinedTagsModal.open(this.#predefinedTags);
+        break;
       case "toggle-theme":
         this.#toggleTheme();
         break;
@@ -258,6 +285,11 @@ export class InventoryApp extends HTMLElement {
 
     if (this.restoreModal.isOpen) {
       this.#closeRestoreModal();
+      return;
+    }
+
+    if (this.predefinedTagsModal.isOpen) {
+      this.predefinedTagsModal.close();
     }
   };
 
@@ -269,6 +301,14 @@ export class InventoryApp extends HTMLElement {
     const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
     const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     this.#applyTheme(savedTheme === "dark" || savedTheme === "light" ? savedTheme : preferredTheme);
+  }
+
+  async #initializePredefinedTags() {
+    const savedTags = await getPredefinedTags();
+    this.#predefinedTags = Array.isArray(savedTags)
+      ? savedTags.map((tag) => String(tag ?? "").trim()).filter(Boolean)
+      : [];
+    this.form.availableTags = this.#predefinedTags;
   }
 
   #toggleTheme() {
@@ -284,8 +324,24 @@ export class InventoryApp extends HTMLElement {
   }
 
   #openFormModal(product = null) {
+    this.form.availableTags = this.#predefinedTags;
     this.productModal.open(product);
   }
+
+  #onPredefinedTagsSave = async (event) => {
+    this.#predefinedTags = Array.isArray(event.detail.tags)
+      ? event.detail.tags.map((tag) => String(tag ?? "").trim()).filter(Boolean)
+      : [];
+
+    try {
+      await savePredefinedTags(this.#predefinedTags);
+      this.form.availableTags = this.#predefinedTags;
+      this.#showStatus("Tags predefinidas salvas com sucesso.", "success");
+    } catch (error) {
+      console.error(error);
+      this.#showStatus("Nao foi possivel salvar as tags predefinidas.", "error");
+    }
+  };
 
   #closeFormModal() {
     this.productModal.close();

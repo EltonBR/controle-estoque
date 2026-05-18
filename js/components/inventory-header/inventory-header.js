@@ -25,6 +25,9 @@ template.innerHTML = `
         <button class="btn btn-secondary btn-icon" type="button" data-action="open-restore" aria-label="Restaurar banco de dados" title="Restaurar banco de dados">
           <span class="icon-mask" aria-hidden="true" style="--icon-url: url('${restoreIconUrl}')"></span>
         </button>
+        <button class="btn btn-secondary" type="button" data-action="open-predefined-tags" aria-label="Gerenciar tags predefinidas" title="Gerenciar tags predefinidas">
+          Tags
+        </button>
         <button class="btn btn-secondary btn-icon" type="button" data-action="toggle-theme" data-role="theme-toggle" aria-label="Ativar tema escuro" title="Ativar tema escuro">
           <span class="icon-mask" aria-hidden="true" style="--icon-url: url('${themeIconUrl}')"></span>
         </button>

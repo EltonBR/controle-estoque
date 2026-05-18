@@ -10,12 +10,15 @@ template.innerHTML = `
             <p class="product-info-card__eyebrow">Informacoes do produto</p>
             <h2 data-role="name">Produto</h2>
           </div>
-          <span class="product-info-card__quantity" data-role="quantity">0 unidades</span>
         </div>
         <div class="product-info-card__media">
           <img class="product-info-card__image" data-role="image" alt="" />
         </div>
         <dl class="product-info-card__grid">
+          <div class="product-info-card__row">
+            <dt>Quantidade</dt>
+            <dd data-role="quantity">0 unidades</dd>
+          </div>
           <div class="product-info-card__row">
             <dt>Codigo de barras</dt>
             <dd data-role="barcode">Nao informado</dd>
@@ -23,6 +26,10 @@ template.innerHTML = `
           <div class="product-info-card__row">
             <dt>Peso</dt>
             <dd data-role="weight">Nao informado</dd>
+          </div>
+          <div class="product-info-card__row product-info-card__row--full">
+            <dt>Tags</dt>
+            <dd class="product-info-card__tags" data-role="tags">Nenhuma tag.</dd>
           </div>
           <div class="product-info-card__row product-info-card__row--full">
             <dt>Observacoes</dt>
@@ -117,6 +124,7 @@ export class ProductInfoModal extends HTMLElement {
     this.quantity = this.querySelector('[data-role="quantity"]');
     this.barcode = this.querySelector('[data-role="barcode"]');
     this.weight = this.querySelector('[data-role="weight"]');
+    this.tags = this.querySelector('[data-role="tags"]');
     this.notes = this.querySelector('[data-role="notes"]');
     this.createdAt = this.querySelector('[data-role="created-at"]');
     this.updatedAt = this.querySelector('[data-role="updated-at"]');
@@ -161,6 +169,7 @@ export class ProductInfoModal extends HTMLElement {
     this.quantity.textContent = `${product.quantity ?? 0} unidades`;
     this.barcode.textContent = product.barcode || "Nao informado";
     this.weight.textContent = formatWeight(product);
+    this.tags.textContent = Array.isArray(product.tags) && product.tags.length ? product.tags.join(", ") : "Nenhuma tag.";
     this.notes.textContent = product.notes || "Sem observacoes.";
     this.createdAt.textContent = formatDate(product.createdAt);
     this.updatedAt.textContent = formatDate(product.updatedAt);
