@@ -52,6 +52,24 @@
   min-width: 6.5rem;
 }
 
+.field-image-preview {
+  display: grid;
+  place-items: center;
+  min-height: 12rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.field-image-preview__img {
+  display: block;
+  width: 100%;
+  max-height: 16rem;
+  object-fit: contain;
+}
+
 .field-history-header {
   display: flex;
   align-items: center;

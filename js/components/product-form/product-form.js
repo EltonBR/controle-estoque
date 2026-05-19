@@ -1,7 +1,11 @@
 import "../product-camera-modal/product-camera-modal.js";
 import "../product-price-history-editor/product-price-history-editor.js";
 import "../product-tags-modal/product-tags-modal.js";
+import { appConfig } from "../../config/app-config.js";
+import { fetchProductByBarcode, normalizeBarcode } from "../../services/open-food-facts.js";
 import { normalizeTagList } from "../../utils/tag-utils.js";
+
+const placeholderImageUrl = new URL("../../../assets/placeholder-product.svg", import.meta.url).href;
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -23,6 +27,9 @@ template.innerHTML = `
           <button class="btn btn-secondary btn-camera" type="button" data-action="open-camera" aria-label="Tirar foto com a camera">
             Camera
           </button>
+        </div>
+        <div class="field-image-preview">
+          <img class="field-image-preview__img" data-role="image-preview" src="${placeholderImageUrl}" alt="Previa da imagem do produto" />
         </div>
         <div class="field-media-status" data-role="image-status" hidden></div>
       </div>
@@ -84,6 +91,15 @@ export class ProductForm extends HTMLElement {
   #selectedImage = "";
   #tags = [];
   #availableTags = [];
+  #barcodeLookupController = null;
+  #barcodeLookupTimer = null;
+  #lastLookupBarcode = "";
+  #lastAutoFill = {
+    image: "",
+    name: "",
+    weight: "",
+    weightUnit: "",
+  };
 
   constructor() {
     super();
@@ -91,7 +107,9 @@ export class ProductForm extends HTMLElement {
     this.form = this.querySelector("form");
     this.titleElement = this.querySelector("#title");
     this.feedback = this.querySelector(".feedback");
+    this.barcodeInput = this.querySelector("#barcode");
     this.imageInput = this.querySelector("#image");
+    this.imagePreview = this.querySelector('[data-role="image-preview"]');
     this.imageStatus = this.querySelector('[data-role="image-status"]');
     this.priceHistoryEditor = this.querySelector("product-price-history-editor");
     this.tagsPreview = this.querySelector('[data-role="tags-preview"]');
@@ -103,6 +121,9 @@ export class ProductForm extends HTMLElement {
   connectedCallback() {
     this.form.addEventListener("submit", this.#handleSubmit);
     this.querySelector('[data-action="reset"]').addEventListener("click", () => this.reset());
+    this.barcodeInput.addEventListener("input", this.#handleBarcodeInput);
+    this.barcodeInput.addEventListener("blur", this.#handleBarcodeBlur);
+    this.barcodeInput.addEventListener("keydown", this.#handleBarcodeKeydown);
     this.imageInput.addEventListener("change", this.#handleImageChange);
     this.addEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
     this.addEventListener("product-tags-save", this.#handleTagsSave);
@@ -111,10 +132,19 @@ export class ProductForm extends HTMLElement {
 
   disconnectedCallback() {
     this.form.removeEventListener("submit", this.#handleSubmit);
+    this.barcodeInput.removeEventListener("input", this.#handleBarcodeInput);
+    this.barcodeInput.removeEventListener("blur", this.#handleBarcodeBlur);
+    this.barcodeInput.removeEventListener("keydown", this.#handleBarcodeKeydown);
     this.imageInput.removeEventListener("change", this.#handleImageChange);
     this.removeEventListener("camera-photo-captured", this.#handleCameraPhotoCaptured);
     this.removeEventListener("product-tags-save", this.#handleTagsSave);
     this.removeEventListener("click", this.#handleClick);
+    this.#barcodeLookupController?.abort();
+
+    if (this.#barcodeLookupTimer) {
+      window.clearTimeout(this.#barcodeLookupTimer);
+      this.#barcodeLookupTimer = null;
+    }
   }
 
   set product(value) {
@@ -140,10 +170,25 @@ export class ProductForm extends HTMLElement {
     this.#editingProduct = null;
     this.#selectedImage = "";
     this.#tags = [];
+    this.#lastLookupBarcode = "";
+    this.#lastAutoFill = {
+      image: "",
+      name: "",
+      weight: "",
+      weightUnit: "",
+    };
+    this.#barcodeLookupController?.abort();
+
+    if (this.#barcodeLookupTimer) {
+      window.clearTimeout(this.#barcodeLookupTimer);
+      this.#barcodeLookupTimer = null;
+    }
+
     this.form.reset();
     this.titleElement.textContent = "Cadastrar produto";
     this.#setFeedback("", "");
     this.#setImageStatus("");
+    this.#renderImagePreview("");
     this.priceHistoryEditor.reset();
     this.#renderTags();
     this.tagsModal.close();
@@ -177,7 +222,15 @@ export class ProductForm extends HTMLElement {
     this.#tags = Array.isArray(product.tags)
       ? product.tags.map((tag) => String(tag ?? "").trim()).filter(Boolean)
       : [];
+    this.#lastLookupBarcode = normalizeBarcode(product.barcode ?? "");
+    this.#lastAutoFill = {
+      image: "",
+      name: "",
+      weight: "",
+      weightUnit: "",
+    };
     this.#setImageStatus(this.#selectedImage ? "Imagem atual carregada." : "");
+    this.#renderImagePreview(this.#selectedImage);
     this.#renderTags();
     this.#setFeedback("Modo de edicao ativo.", "success");
   }
@@ -221,6 +274,10 @@ export class ProductForm extends HTMLElement {
     this.imageStatus.textContent = message;
   }
 
+  #renderImagePreview(image) {
+    this.imagePreview.src = image || placeholderImageUrl;
+  }
+
   #renderTags() {
     this.tagsPreview.innerHTML = "";
 
@@ -237,6 +294,114 @@ export class ProductForm extends HTMLElement {
       chip.textContent = tag;
       this.tagsPreview.appendChild(chip);
     });
+  }
+
+  #canAutoFillControl(control, key) {
+    const currentValue = String(control?.value ?? "").trim();
+    const lastAutoFillValue = String(this.#lastAutoFill[key] ?? "").trim();
+
+    return !currentValue || currentValue === lastAutoFillValue;
+  }
+
+  #queueBarcodeLookup(immediate = false) {
+    if (this.#barcodeLookupTimer) {
+      window.clearTimeout(this.#barcodeLookupTimer);
+      this.#barcodeLookupTimer = null;
+    }
+
+    if (immediate) {
+      this.#lookupProductByBarcode();
+      return;
+    }
+
+    this.#barcodeLookupTimer = window.setTimeout(() => {
+      this.#barcodeLookupTimer = null;
+      this.#lookupProductByBarcode();
+    }, Number(appConfig.BARCODE_LOOKUP_DEBOUNCE_MS ?? 550));
+  }
+
+  async #lookupProductByBarcode() {
+    const barcode = normalizeBarcode(this.barcodeInput.value);
+
+    if (barcode.length < Number(appConfig.BARCODE_LOOKUP_MIN_LENGTH ?? 8) || barcode === this.#lastLookupBarcode) {
+      return;
+    }
+
+    this.#barcodeLookupController?.abort();
+    this.#barcodeLookupController = new AbortController();
+
+    try {
+      this.#setFeedback("Buscando dados do produto na Open Food Facts...", "");
+      const result = await fetchProductByBarcode(barcode, {
+        signal: this.#barcodeLookupController.signal,
+      });
+
+      if (normalizeBarcode(this.barcodeInput.value) !== barcode) {
+        return;
+      }
+
+      if (result.disabled) {
+        return;
+      }
+
+      if (!result.found || !result.mappedProduct) {
+        this.#setFeedback("Nenhum produto encontrado para esse codigo de barras.", "error");
+        return;
+      }
+
+      const filledFields = [];
+      const { name, imageDataUrl, quantity } = result.mappedProduct;
+      const nameInput = this.form.elements.namedItem("name");
+      const weightInput = this.form.elements.namedItem("weight");
+      const weightUnitInput = this.form.elements.namedItem("weightUnit");
+
+      if (name && this.#canAutoFillControl(nameInput, "name")) {
+        nameInput.value = name;
+        this.#lastAutoFill.name = name;
+        filledFields.push("nome");
+      }
+
+      if (quantity && this.#canAutoFillControl(weightInput, "weight")) {
+        weightInput.value = String(quantity.weight);
+        this.#lastAutoFill.weight = String(quantity.weight);
+        filledFields.push("peso");
+      }
+
+      if (quantity && this.#canAutoFillControl(weightUnitInput, "weightUnit")) {
+        weightUnitInput.value = quantity.weightUnit;
+        this.#lastAutoFill.weightUnit = quantity.weightUnit;
+      }
+
+      if (
+        imageDataUrl &&
+        (!this.#selectedImage || this.#selectedImage === this.#lastAutoFill.image) &&
+        !this.imageInput.files?.length
+      ) {
+        this.#selectedImage = imageDataUrl;
+        this.#lastAutoFill.image = imageDataUrl;
+        this.#renderImagePreview(this.#selectedImage);
+        this.#setImageStatus("Imagem baixada da Open Food Facts.");
+        filledFields.push("imagem");
+      }
+
+      this.#lastLookupBarcode = barcode;
+
+      if (filledFields.length) {
+        this.#setFeedback(`Dados preenchidos automaticamente: ${filledFields.join(", ")}.`, "success");
+        return;
+      }
+
+      this.#setFeedback("Produto encontrado na Open Food Facts, mas sem novos dados para preencher.", "success");
+    } catch (error) {
+      if (error.name === "AbortError") {
+        return;
+      }
+
+      console.error(error);
+      this.#setFeedback("Nao foi possivel consultar a Open Food Facts no momento.", "error");
+    } finally {
+      this.#barcodeLookupController = null;
+    }
   }
 
   async #openCameraModal() {
@@ -270,14 +435,50 @@ export class ProductForm extends HTMLElement {
     }
   };
 
-  #handleImageChange = () => {
+  #handleImageChange = async () => {
     const file = this.imageInput.files?.[0];
-    this.#setImageStatus(file ? `Arquivo selecionado: ${file.name}` : "");
+    this.#lastAutoFill.image = "";
+
+    if (!file) {
+      this.#renderImagePreview(this.#selectedImage);
+      this.#setImageStatus("");
+      return;
+    }
+
+    try {
+      const imageData = await this.#readSelectedFile();
+      this.#renderImagePreview(imageData);
+      this.#setImageStatus(`Arquivo selecionado: ${file.name}`);
+    } catch (error) {
+      console.error(error);
+      this.#renderImagePreview(this.#selectedImage);
+      this.#setFeedback(error.message || "Nao foi possivel ler a imagem selecionada.", "error");
+    }
+  };
+
+  #handleBarcodeInput = () => {
+    this.#lastLookupBarcode = "";
+    this.#queueBarcodeLookup();
+  };
+
+  #handleBarcodeBlur = () => {
+    this.#queueBarcodeLookup(true);
+  };
+
+  #handleBarcodeKeydown = (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    this.#queueBarcodeLookup(true);
   };
 
   #handleCameraPhotoCaptured = (event) => {
     this.#selectedImage = event.detail.imageData ?? "";
+    this.#lastAutoFill.image = "";
     this.imageInput.value = "";
+    this.#renderImagePreview(this.#selectedImage);
     this.#setImageStatus("Foto capturada com a camera.");
     this.#setFeedback("Foto do produto capturada com sucesso.", "success");
   };

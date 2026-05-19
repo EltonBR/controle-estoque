@@ -108,6 +108,20 @@ Responsavel por:
 - excluir produto
 - substituir toda a base em restauracao
 
+#### 5. Camada de configuracao e integracoes externas
+
+Arquivos:
+
+- `env.js`
+- `js/config/app-config.js`
+- `js/services/open-food-facts.js`
+
+Responsavel por:
+
+- centralizar configuracoes de ambiente do frontend estatico
+- isolar integracoes HTTP externas da camada de componentes
+- transformar resposta de API externa em dados consumiveis pela UI
+
 ## Estrutura atual de diretorios
 
 ### Raiz
@@ -115,6 +129,8 @@ Responsavel por:
 - `index.html`
 - `styles.css`
 - `CONTEXTO_PROJETO.md`
+- `env.js`
+- `env.example.js`
 - `js/app.js`
 - `js/db.js`
 - `assets/`
