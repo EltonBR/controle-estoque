@@ -52,7 +52,7 @@ template.innerHTML = `
       </div>
       <div class="field-row field-row--dates">
         <div class="field">
-          <label for="manufacturedAt">Fabricacao item mais antigo</label>
+          <label for="manufacturedAt">Validade item mais antigo</label>
           <input id="manufacturedAt" name="manufacturedAt" type="date" />
         </div>
         <div class="field">

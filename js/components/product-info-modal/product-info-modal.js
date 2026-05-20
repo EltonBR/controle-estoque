@@ -30,7 +30,7 @@ template.innerHTML = `
             <dd data-role="weight">Nao informado</dd>
           </div>
           <div class="product-info-card__row">
-            <dt>Fabricacao item mais antigo</dt>
+            <dt>Validade item mais antigo</dt>
             <dd data-role="manufactured-at">Nao informado</dd>
           </div>
           <div class="product-info-card__row">

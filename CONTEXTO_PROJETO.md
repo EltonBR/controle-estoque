@@ -303,7 +303,7 @@ Responsabilidades:
   - quantidade
   - peso
 - validacao de:
-  - fabricacao item mais antigo
+  - validade item mais antigo
   - validade em meses
 - leitura de imagem por `input[type=file]`
 - abertura do modal de camera
@@ -560,7 +560,7 @@ Atualmente os CSS dos componentes sao carregados pelo `index.html`.
 - tags predefinidas
 - tags por produto
 - historico de preco
-- fabricacao do item mais antigo
+- validade do item mais antigo
 - validade em meses
 
 ### Imagens
